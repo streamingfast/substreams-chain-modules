@@ -1,0 +1,14 @@
+[
+  {
+    "type": "event",
+    "name": "PoolCreated",
+    "inputs": [
+      {"name": "token0", "type": "address", "indexed": true},
+      {"name": "token1", "type": "address", "indexed": true},
+      {"name": "stable", "type": "bool", "indexed": true},
+      {"name": "pool", "type": "address", "indexed": false},
+      {"name": "allPoolsLength", "type": "uint256", "indexed": false}
+    ],
+    "anonymous": false
+  }
+]

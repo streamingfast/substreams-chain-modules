@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package velodrome.types.v1;
+
+message Pool {
+  string address   = 1;
+  string token0    = 2;
+  string token1    = 3;
+  bool   stable    = 4;
+  string tx_hash   = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message Pools {
+  repeated Pool pools = 1;
+}
+
+message Swap {
+  string pool        = 1;
+  string sender      = 2;
+  string to          = 3;
+  string amount0_in  = 4;
+  string amount1_in  = 5;
+  string amount0_out = 6;
+  string amount1_out = 7;
+  string tx_hash     = 8;
+  uint64 log_index   = 9;
+  uint64 block_num   = 10;
+  uint64 timestamp   = 11;
+}
+
+message LiquidityEvent {
+  string event_type = 1;
+  string pool       = 2;
+  string sender     = 3;
+  string amount0    = 4;
+  string amount1    = 5;
+  string tx_hash    = 6;
+  uint64 log_index  = 7;
+  uint64 block_num  = 8;
+  uint64 timestamp  = 9;
+}
+
+message Events {
+  repeated Swap          swaps     = 1;
+  repeated LiquidityEvent liquidity = 2;
+}
