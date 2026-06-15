@@ -1,0 +1,23 @@
+[workspace]
+members = []
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+keywords = ["substreams", "wasm", "streamingfast"]
+repository = "https://github.com/streamingfast/substreams-chain-modules"
+
+[workspace.dependencies]
+anyhow = "1"
+hex = "0.4"
+num-bigint = "0.4"
+prost = "0.13"
+prost-types = "0.13"
+substreams = "0.7"
+pretty_assertions = "1"
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = "debuginfo"
