@@ -4,8 +4,10 @@ package:
   name: velodrome-substreams
   version: v0.1.0
   description: Indexes Velodrome V2 pool creation, swaps, and liquidity events on Optimism. Outputs DatabaseChanges for SQL sink consumption.
-  url: https://github.com/streamingfast/substreams-chain-modules
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/dex/velodrome-substreams
   image: logo.png
+  doc: README.md
+  
 
 imports:
   database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
