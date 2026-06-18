@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "dex/optimism/velodrome-substreams",
+    "dex/velodrome-substreams",
 ]
 resolver = "2"
 
