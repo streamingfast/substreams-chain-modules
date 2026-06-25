@@ -1,0 +1,23 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "address", "name": "staker", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "newStake", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "totalStake", "type": "uint256" }
+    ],
+    "name": "Staked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "address", "name": "staker", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "principal", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "baseReward", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "delegationReward", "type": "uint256" }
+    ],
+    "name": "Unstaked",
+    "type": "event"
+  }
+]

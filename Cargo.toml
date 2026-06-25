@@ -1,6 +1,9 @@
 [workspace]
 members = [
     "dex/velodrome-substreams",
+    "nft/cryptopunks-substreams",
+    "staking/lido-substreams",
+    "staking/chainlink-staking-substreams",
 ]
 resolver = "2"
 

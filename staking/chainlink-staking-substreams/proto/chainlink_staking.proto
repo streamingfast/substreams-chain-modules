@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package chainlink_staking.types.v1;
+
+option go_package = "github.com/streamingfast/substreams-chain-modules/staking/chainlink-staking-substreams/pb;pb";
+
+message StakeEvent {
+  string id = 1;
+  string pool = 2;
+  string staker = 3;
+  string event_type = 4;
+  string amount = 5;
+  string new_stake = 6;
+  string new_total_principal = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message StakeEventV1 {
+  string id = 1;
+  string staker = 2;
+  string event_type = 3;
+  string new_stake = 4;
+  string total_stake = 5;
+  string principal = 6;
+  string base_reward = 7;
+  string delegation_reward = 8;
+  string tx_hash = 9;
+  uint64 log_index = 10;
+  uint64 block_num = 11;
+  uint64 timestamp = 12;
+}
+
+message RewardUpdate {
+  string id = 1;
+  string pool_type = 2;
+  string base_reward_per_token = 3;
+  string delegated_reward_per_token = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message RewardVaultSet {
+  string id = 1;
+  string pool = 2;
+  string old_reward_vault = 3;
+  string new_reward_vault = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message Events {
+  repeated StakeEvent stake_events = 1;
+  repeated StakeEventV1 stake_events_v1 = 2;
+  repeated RewardUpdate reward_updates = 3;
+  repeated RewardVaultSet reward_vault_sets = 4;
+}

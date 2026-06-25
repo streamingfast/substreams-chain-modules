@@ -1,0 +1,19 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "uint256", "name": "baseRewardPerToken", "type": "uint256" }
+    ],
+    "name": "CommunityPoolRewardUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "uint256", "name": "baseRewardPerToken", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "delegatedRewardPerToken", "type": "uint256" }
+    ],
+    "name": "OperatorPoolRewardUpdated",
+    "type": "event"
+  }
+]

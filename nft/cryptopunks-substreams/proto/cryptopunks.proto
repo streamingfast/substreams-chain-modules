@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package cryptopunks.types.v1;
+
+option go_package = "github.com/streamingfast/substreams-chain-modules/nft/cryptopunks-substreams/pb;pb";
+
+message Trade {
+  string id = 1;
+  uint64 punk_index = 2;
+  string price_eth_raw = 3;
+  string buyer = 4;
+  string seller = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message Bid {
+  string id = 1;
+  uint64 punk_index = 2;
+  string amount_raw = 3;
+  string bidder = 4;
+  string event_type = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message Events {
+  repeated Trade trades = 1;
+  repeated Bid bids = 2;
+}

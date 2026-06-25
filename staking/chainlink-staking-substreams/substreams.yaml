@@ -1,0 +1,62 @@
+specVersion: v0.1.0
+
+package:
+  name: chainlink-staking-substreams
+  version: v0.1.0
+  description: Indexes Chainlink LINK staking events across CommunityStakingPool, OperatorStakingPool, and legacy Staking V1 on Ethereum mainnet. Outputs DatabaseChanges for SQL sink consumption.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/chainlink-staking-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - chainlink_staking.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/chainlink_staking_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 16083969
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:chainlink_staking.types.v1.Events
+
+  - name: store_reward_vaults
+    kind: store
+    initialBlock: 16083969
+    updatePolicy: set_if_not_exists
+    valueType: string
+    inputs:
+      - map: map_events
+
+  - name: map_reward_vault_events
+    kind: map
+    initialBlock: 16083969
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+      - store: store_reward_vaults
+        mode: get
+    output:
+      type: proto:chainlink_staking.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 16083969
+    inputs:
+      - map: map_events
+      - map: map_reward_vault_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
