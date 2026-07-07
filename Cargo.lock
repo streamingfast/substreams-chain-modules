@@ -613,6 +613,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
 
 [[package]]
+name = "morpho_blue_substreams"
+version = "0.1.0"
+dependencies = [
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "multimap"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

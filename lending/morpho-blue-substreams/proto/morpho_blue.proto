@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package morpho_blue.types.v1;
+
+option go_package = "github.com/streamingfast/substreams-chain-modules/lending/morpho-blue-substreams/pb;pb";
+
+message Events {
+  repeated MarketCreated markets_created = 1;
+  repeated Supply supplies = 2;
+  repeated SupplyCollateral supply_collaterals = 3;
+  repeated Borrow borrows = 4;
+  repeated Repay repays = 5;
+  repeated Withdraw withdraws = 6;
+  repeated WithdrawCollateral withdraw_collaterals = 7;
+  repeated Liquidate liquidates = 8;
+  repeated AccrueInterest accrued_interests = 9;
+  repeated FlashLoan flash_loans = 10;
+}
+
+message MarketCreated {
+  string id = 1;
+  string market_id = 2;
+  string loan_token = 3;
+  string collateral_token = 4;
+  string oracle = 5;
+  string irm = 6;
+  string lltv = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message Supply {
+  string id = 1;
+  string market_id = 2;
+  string caller = 3;
+  string on_behalf = 4;
+  string assets = 5;
+  string shares = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message SupplyCollateral {
+  string id = 1;
+  string market_id = 2;
+  string caller = 3;
+  string on_behalf = 4;
+  string assets = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message Borrow {
+  string id = 1;
+  string market_id = 2;
+  string caller = 3;
+  string on_behalf = 4;
+  string receiver = 5;
+  string assets = 6;
+  string shares = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message Repay {
+  string id = 1;
+  string market_id = 2;
+  string caller = 3;
+  string on_behalf = 4;
+  string assets = 5;
+  string shares = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message Withdraw {
+  string id = 1;
+  string market_id = 2;
+  string caller = 3;
+  string on_behalf = 4;
+  string receiver = 5;
+  string assets = 6;
+  string shares = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message WithdrawCollateral {
+  string id = 1;
+  string market_id = 2;
+  string caller = 3;
+  string on_behalf = 4;
+  string receiver = 5;
+  string assets = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message Liquidate {
+  string id = 1;
+  string market_id = 2;
+  string caller = 3;
+  string borrower = 4;
+  string repaid_assets = 5;
+  string repaid_shares = 6;
+  string seized_assets = 7;
+  string bad_debt_assets = 8;
+  string bad_debt_shares = 9;
+  string tx_hash = 10;
+  uint64 log_index = 11;
+  uint64 block_num = 12;
+  uint64 timestamp = 13;
+}
+
+message AccrueInterest {
+  string id = 1;
+  string market_id = 2;
+  string prev_borrow_rate = 3;
+  string interest = 4;
+  string fee_shares = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message FlashLoan {
+  string id = 1;
+  string caller = 2;
+  string token = 3;
+  string assets = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
