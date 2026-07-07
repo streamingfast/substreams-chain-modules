@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package seaport.types.v1;
+
+message Events {
+  repeated OrderFulfilled orders_fulfilled = 1;
+}
+
+message SpentItem {
+  uint32 item_type = 1;
+  string token = 2;
+  string identifier = 3;
+  string amount = 4;
+}
+
+message ReceivedItem {
+  uint32 item_type = 1;
+  string token = 2;
+  string identifier = 3;
+  string amount = 4;
+  string recipient = 5;
+}
+
+message OrderFulfilled {
+  string id = 1;
+  string order_hash = 2;
+  string offerer = 3;
+  string zone = 4;
+  string recipient = 5;
+  repeated SpentItem offer = 6;
+  repeated ReceivedItem consideration = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
