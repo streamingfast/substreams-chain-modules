@@ -15,6 +15,9 @@ members = [
     "nft/cryptopunks-substreams",
     "staking/lido-substreams",
     "staking/chainlink-staking-substreams",
+    "staking/coinbase-wrapped-staked-eth-substreams",
+    "staking/convex-finance-substreams",
+    "staking/kelp-dao-substreams",
 ]
 resolver = "2"
 

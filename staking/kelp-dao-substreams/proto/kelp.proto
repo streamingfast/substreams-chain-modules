@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package kelp.types.v1;
+
+message Events {
+  repeated AssetDeposit asset_deposits = 1;
+  repeated EthDeposit eth_deposits = 2;
+  repeated AssetWithdrawalQueued withdrawals_queued = 3;
+  repeated AssetWithdrawalFinalized withdrawals_finalized = 4;
+}
+
+message AssetDeposit {
+  string id = 1;
+  string depositor = 2;
+  string asset = 3;
+  string deposit_amount = 4;
+  string rseth_mint_amount = 5;
+  string referral_id = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message EthDeposit {
+  string id = 1;
+  string depositor = 2;
+  string deposit_amount = 3;
+  string rseth_mint_amount = 4;
+  string referral_id = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message AssetWithdrawalQueued {
+  string id = 1;
+  string withdrawer = 2;
+  string asset = 3;
+  string rseth_unstaked = 4;
+  string user_nonce = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message AssetWithdrawalFinalized {
+  string id = 1;
+  string withdrawer = 2;
+  string asset = 3;
+  string amount_burned = 4;
+  string amount_received = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}

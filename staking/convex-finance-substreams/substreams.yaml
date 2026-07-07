@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: convex-finance-substreams
+  version: v0.1.0
+  description: Indexes Convex Finance on Ethereum mainnet. Tracks deposits and withdrawals on the Convex Booster contract, enabling monitoring of Curve LP token staking activity and pool participation.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/convex-finance-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - convex.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/convex_finance_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 12700000
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:convex.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 12700000
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
