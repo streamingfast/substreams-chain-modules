@@ -1,0 +1,155 @@
+syntax = "proto3";
+package liquity.types.v1;
+
+message Events {
+  repeated TroveUpdated trove_updated = 1;
+  repeated TroveLiquidated trove_liquidated = 2;
+  repeated Liquidation liquidations = 3;
+  repeated Redemption redemptions = 4;
+  repeated LusdBorrowingFeePaid lusd_borrowing_fee_paid = 5;
+  repeated LastGoodPriceUpdated last_good_price_updated = 6;
+  repeated ActivePoolEthBalanceUpdated active_pool_eth_balance_updated = 7;
+  repeated ActivePoolLusdDebtUpdated active_pool_lusd_debt_updated = 8;
+  repeated CollBalanceUpdated coll_balance_updated = 9;
+  repeated StabilityPoolEthBalanceUpdated stability_pool_eth_balance_updated = 10;
+  repeated StabilityPoolLusdBalanceUpdated stability_pool_lusd_balance_updated = 11;
+  repeated EthGainWithdrawn eth_gain_withdrawn = 12;
+  repeated UserDepositChanged user_deposit_changed = 13;
+}
+
+// Emitted by both TroveManager and BorrowerOperations; source field distinguishes them.
+message TroveUpdated {
+  string id = 1;
+  string borrower = 2;
+  string debt = 3;
+  string coll = 4;
+  string stake = 5;
+  string operation = 6;
+  string source = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message TroveLiquidated {
+  string id = 1;
+  string borrower = 2;
+  string debt = 3;
+  string coll = 4;
+  string operation = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message Liquidation {
+  string id = 1;
+  string liquidated_debt = 2;
+  string liquidated_coll = 3;
+  string coll_gas_compensation = 4;
+  string lusd_gas_compensation = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message Redemption {
+  string id = 1;
+  string attempted_lusd_amount = 2;
+  string actual_lusd_amount = 3;
+  string eth_sent = 4;
+  string eth_fee = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message LusdBorrowingFeePaid {
+  string id = 1;
+  string borrower = 2;
+  string lusd_fee = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message LastGoodPriceUpdated {
+  string id = 1;
+  string price = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message ActivePoolEthBalanceUpdated {
+  string id = 1;
+  string eth = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message ActivePoolLusdDebtUpdated {
+  string id = 1;
+  string lusd_debt = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message CollBalanceUpdated {
+  string id = 1;
+  string account = 2;
+  string new_balance = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message StabilityPoolEthBalanceUpdated {
+  string id = 1;
+  string new_balance = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message StabilityPoolLusdBalanceUpdated {
+  string id = 1;
+  string new_balance = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message EthGainWithdrawn {
+  string id = 1;
+  string depositor = 2;
+  string eth = 3;
+  string lusd_loss = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message UserDepositChanged {
+  string id = 1;
+  string depositor = 2;
+  string new_deposit = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}

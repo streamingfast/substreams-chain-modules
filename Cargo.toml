@@ -2,6 +2,7 @@
 members = [
     "dex/velodrome-substreams",
     "lending/compound-v3-substreams",
+    "lending/liquity-substreams",
     "lending/morpho-blue-substreams",
     "nft/looksrare-substreams",
     "staking/eigenlayer-substreams",
