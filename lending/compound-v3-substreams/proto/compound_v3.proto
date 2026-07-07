@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package compound_v3.types.v1;
+
+option go_package = "github.com/streamingfast/substreams-chain-modules/lending/compound-v3-substreams/pb;pb";
+
+message Events {
+  repeated Supply supplies = 1;
+  repeated SupplyCollateral supply_collaterals = 2;
+  repeated Withdraw withdraws = 3;
+  repeated WithdrawCollateral withdraw_collaterals = 4;
+  repeated Transfer transfers = 5;
+  repeated TransferCollateral transfer_collaterals = 6;
+  repeated AbsorbCollateral absorb_collaterals = 7;
+  repeated AbsorbDebt absorb_debts = 8;
+  repeated BuyCollateral buy_collaterals = 9;
+  repeated PauseAction pause_actions = 10;
+  repeated WithdrawReserves withdraw_reserves = 11;
+}
+
+message Supply {
+  string id = 1;
+  string comet = 2;
+  string from = 3;
+  string dst = 4;
+  string amount = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message SupplyCollateral {
+  string id = 1;
+  string comet = 2;
+  string from = 3;
+  string dst = 4;
+  string asset = 5;
+  string amount = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message Withdraw {
+  string id = 1;
+  string comet = 2;
+  string src = 3;
+  string to = 4;
+  string amount = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message WithdrawCollateral {
+  string id = 1;
+  string comet = 2;
+  string src = 3;
+  string to = 4;
+  string asset = 5;
+  string amount = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message Transfer {
+  string id = 1;
+  string comet = 2;
+  string from = 3;
+  string to = 4;
+  string amount = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message TransferCollateral {
+  string id = 1;
+  string comet = 2;
+  string from = 3;
+  string to = 4;
+  string asset = 5;
+  string amount = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message AbsorbCollateral {
+  string id = 1;
+  string comet = 2;
+  string absorber = 3;
+  string borrower = 4;
+  string asset = 5;
+  string collateral_absorbed = 6;
+  string usd_value = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message AbsorbDebt {
+  string id = 1;
+  string comet = 2;
+  string absorber = 3;
+  string borrower = 4;
+  string base_paid_out = 5;
+  string usd_value = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message BuyCollateral {
+  string id = 1;
+  string comet = 2;
+  string buyer = 3;
+  string asset = 4;
+  string base_amount = 5;
+  string collateral_amount = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message PauseAction {
+  string id = 1;
+  string comet = 2;
+  bool supply_paused = 3;
+  bool transfer_paused = 4;
+  bool withdraw_paused = 5;
+  bool absorb_paused = 6;
+  bool buy_paused = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message WithdrawReserves {
+  string id = 1;
+  string comet = 2;
+  string to = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
