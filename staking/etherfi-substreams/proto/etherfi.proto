@@ -1,0 +1,163 @@
+syntax = "proto3";
+
+package etherfi.types.v1;
+
+option go_package = "github.com/streamingfast/substreams-chain-modules/staking/etherfi-substreams/pb;pb";
+
+message Events {
+  // EarlyAdopterPool
+  repeated EarlyDeposit early_deposits = 1;
+  repeated EarlyWithdrawn early_withdrawns = 2;
+  repeated FundsClaimed funds_claimed = 3;
+  // LiquidityPool
+  repeated Deposit deposits = 4;
+  repeated Withdraw withdraws = 5;
+  repeated Rebase rebases = 6;
+  repeated ValidatorRegistered validators_registered = 7;
+  repeated ValidatorApproved validators_approved = 8;
+  // NodesManager
+  repeated FullWithdrawal full_withdrawals = 9;
+  repeated PartialWithdrawal partial_withdrawals = 10;
+  repeated NodeExitRequested node_exit_requests = 11;
+  repeated NodeExitProcessed node_exit_processed = 12;
+  repeated NodeEvicted node_evictions = 13;
+}
+
+message EarlyDeposit {
+  string id = 1;
+  string sender = 2;
+  string amount = 3;
+  string token = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message EarlyWithdrawn {
+  string id = 1;
+  string sender = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message FundsClaimed {
+  string id = 1;
+  string user = 2;
+  string points_accumulated = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message Deposit {
+  string id = 1;
+  string sender = 2;
+  string amount = 3;
+  string source = 4;
+  string referral = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message Withdraw {
+  string id = 1;
+  string sender = 2;
+  string recipient = 3;
+  string amount = 4;
+  string source = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message Rebase {
+  string id = 1;
+  string total_eth_locked = 2;
+  string total_eeth_shares = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message ValidatorRegistered {
+  string id = 1;
+  string validator_id = 2;
+  string pub_key = 3;
+  string deposit_root = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message ValidatorApproved {
+  string id = 1;
+  string validator_id = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message FullWithdrawal {
+  string id = 1;
+  string validator_id = 2;
+  string etherfi_node = 3;
+  string to_operator = 4;
+  string to_tnft = 5;
+  string to_bnft = 6;
+  string to_treasury = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message PartialWithdrawal {
+  string id = 1;
+  string validator_id = 2;
+  string etherfi_node = 3;
+  string to_operator = 4;
+  string to_tnft = 5;
+  string to_bnft = 6;
+  string to_treasury = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message NodeExitRequested {
+  string id = 1;
+  string validator_id = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message NodeExitProcessed {
+  string id = 1;
+  string validator_id = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message NodeEvicted {
+  string id = 1;
+  string validator_id = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}

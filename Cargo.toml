@@ -5,6 +5,7 @@ members = [
     "lending/morpho-blue-substreams",
     "nft/looksrare-substreams",
     "staking/eigenlayer-substreams",
+    "staking/etherfi-substreams",
     "nft/cryptopunks-substreams",
     "staking/lido-substreams",
     "staking/chainlink-staking-substreams",
