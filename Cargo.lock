@@ -201,6 +201,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "eigenlayer_substreams"
+version = "0.1.0"
+dependencies = [
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "either"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

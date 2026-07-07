@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package eigenlayer.types.v1;
+
+option go_package = "github.com/streamingfast/substreams-chain-modules/staking/eigenlayer-substreams/pb;pb";
+
+message Events {
+  repeated Deposit deposits = 1;
+  repeated WithdrawalQueued withdrawals_queued = 2;
+  repeated WithdrawalCompleted withdrawals_completed = 3;
+  repeated ShareWithdrawalQueued share_withdrawals_queued = 4;
+  repeated BeaconChainETHDeposited beacon_chain_eth_deposits = 5;
+  repeated PodDeployed pods_deployed = 6;
+}
+
+message Deposit {
+  string id = 1;
+  string depositor = 2;
+  string token = 3;
+  string strategy = 4;
+  string shares = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message WithdrawalQueued {
+  string id = 1;
+  string depositor = 2;
+  string nonce = 3;
+  string withdrawer = 4;
+  string delegated_address = 5;
+  string withdrawal_root = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message WithdrawalCompleted {
+  string id = 1;
+  string depositor = 2;
+  string nonce = 3;
+  string withdrawer = 4;
+  string withdrawal_root = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message ShareWithdrawalQueued {
+  string id = 1;
+  string depositor = 2;
+  string nonce = 3;
+  string strategy = 4;
+  string shares = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message BeaconChainETHDeposited {
+  string id = 1;
+  string pod_owner = 2;
+  string amount = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message PodDeployed {
+  string id = 1;
+  string eigen_pod = 2;
+  string pod_owner = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
