@@ -1,0 +1,29 @@
+syntax = "proto3";
+package maple.types.v1;
+
+message Events {
+  repeated InstanceDeployed instances_deployed = 1;
+  repeated LoanAddedToTransitionLoanManager loans_added_to_transition = 2;
+}
+
+// Emitted by all 4 factory contracts; factory_type field identifies which factory.
+message InstanceDeployed {
+  string id = 1;
+  string version = 2;
+  string instance = 3;
+  string factory_type = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message LoanAddedToTransitionLoanManager {
+  string id = 1;
+  string loan_manager = 2;
+  string loan = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}

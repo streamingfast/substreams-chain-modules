@@ -1,0 +1,107 @@
+[
+  {
+    "name": "NewRelease",
+    "inputs": [
+      {
+        "type": "uint256",
+        "name": "release_id",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "template",
+        "indexed": false
+      },
+      {
+        "type": "string",
+        "name": "api_version",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "NewVault",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "token",
+        "indexed": true
+      },
+      {
+        "type": "uint256",
+        "name": "deployment_id",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "vault",
+        "indexed": false
+      },
+      {
+        "type": "string",
+        "name": "api_version",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "NewExperimentalVault",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "token",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "deployer",
+        "indexed": true
+      },
+      {
+        "type": "address",
+        "name": "vault",
+        "indexed": false
+      },
+      {
+        "type": "string",
+        "name": "api_version",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "NewGovernance",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "governance",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  },
+  {
+    "name": "VaultTagged",
+    "inputs": [
+      {
+        "type": "address",
+        "name": "vault",
+        "indexed": false
+      },
+      {
+        "type": "string",
+        "name": "tag",
+        "indexed": false
+      }
+    ],
+    "anonymous": false,
+    "type": "event"
+  }
+]

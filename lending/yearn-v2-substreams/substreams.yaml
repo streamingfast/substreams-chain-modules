@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: yearn-v2-substreams
+  version: v0.1.0
+  description: Indexes Yearn Finance v2 vault registry on Ethereum mainnet. Tracks both Registry v1 and v2 to capture all vault deployments (NewVault, NewExperimentalVault) and vault tags across the full protocol history.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/lending/yearn-v2-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - yearn.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/yearn_v2_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 11563389
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:yearn.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 11563389
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges

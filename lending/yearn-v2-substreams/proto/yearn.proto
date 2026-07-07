@@ -1,0 +1,46 @@
+syntax = "proto3";
+package yearn.types.v1;
+
+message Events {
+  repeated NewVault new_vaults = 1;
+  repeated NewExperimentalVault new_experimental_vaults = 2;
+  repeated VaultTagged vault_tagged = 3;
+}
+
+// Emitted by both Registry_v1 and Registry_v2; registry field distinguishes them.
+message NewVault {
+  string id = 1;
+  string token = 2;
+  string vault = 3;
+  string api_version = 4;
+  string deployment_id = 5;
+  string registry = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message NewExperimentalVault {
+  string id = 1;
+  string token = 2;
+  string deployer = 3;
+  string vault = 4;
+  string api_version = 5;
+  string registry = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message VaultTagged {
+  string id = 1;
+  string vault = 2;
+  string tag = 3;
+  string registry = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
