@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package looksrare.types.v1;
+
+option go_package = "github.com/streamingfast/substreams-chain-modules/nft/looksrare-substreams/pb;pb";
+
+message Events {
+  repeated TakerAsk taker_asks = 1;
+  repeated TakerBid taker_bids = 2;
+  repeated RoyaltyPayment royalty_payments = 3;
+  repeated CancelAllOrders cancel_all_orders = 4;
+  repeated CancelMultipleOrders cancel_multiple_orders = 5;
+}
+
+message TakerAsk {
+  string id = 1;
+  string order_hash = 2;
+  string order_nonce = 3;
+  string taker = 4;
+  string maker = 5;
+  string strategy = 6;
+  string currency = 7;
+  string collection = 8;
+  string token_id = 9;
+  string amount = 10;
+  string price = 11;
+  string tx_hash = 12;
+  uint64 log_index = 13;
+  uint64 block_num = 14;
+  uint64 timestamp = 15;
+}
+
+message TakerBid {
+  string id = 1;
+  string order_hash = 2;
+  string order_nonce = 3;
+  string taker = 4;
+  string maker = 5;
+  string strategy = 6;
+  string currency = 7;
+  string collection = 8;
+  string token_id = 9;
+  string amount = 10;
+  string price = 11;
+  string tx_hash = 12;
+  uint64 log_index = 13;
+  uint64 block_num = 14;
+  uint64 timestamp = 15;
+}
+
+message RoyaltyPayment {
+  string id = 1;
+  string collection = 2;
+  string token_id = 3;
+  string royalty_recipient = 4;
+  string currency = 5;
+  string amount = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message CancelAllOrders {
+  string id = 1;
+  string user = 2;
+  string new_min_nonce = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message CancelMultipleOrders {
+  string id = 1;
+  string user = 2;
+  repeated string order_nonces = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
