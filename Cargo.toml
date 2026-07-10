@@ -37,6 +37,12 @@ members = [
     "staking/aqua-patina-substreams",
     "staking/fx-protocol-substreams",
     "staking/gudchain-substreams",
+    "staking/klimadao-substreams",
+    "staking/matrixdock-substreams",
+    "staking/paxos-gold-substreams",
+    "staking/usual-substreams",
+    "staking/yieldyak-staked-avax-substreams",
+    "staking/bob-fusion-substreams",
 ]
 resolver = "2"
 
