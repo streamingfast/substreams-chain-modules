@@ -43,6 +43,16 @@ members = [
     "staking/usual-substreams",
     "staking/yieldyak-staked-avax-substreams",
     "staking/bob-fusion-substreams",
+    "staking/cygnus-finance-substreams",
+    "staking/geode-substreams",
+    "staking/mev-protocol-substreams",
+    "staking/ora-protocol-substreams",
+    "staking/stcelo-substreams",
+    "staking/tensorplex-substreams",
+    "staking/tether-gold-substreams",
+    "staking/beethovenx-sftmx-substreams",
+    "staking/benqi-staked-avax-substreams",
+    "staking/eigenpie-substreams",
 ]
 resolver = "2"
 

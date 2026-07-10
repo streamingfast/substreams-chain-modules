@@ -1,0 +1,15 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "ProposalApproved",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      }
+    ]
+  }
+]
