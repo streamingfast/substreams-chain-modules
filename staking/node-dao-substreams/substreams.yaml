@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: node-dao-substreams
+  version: v0.1.0
+  description: Indexes NodeDAO liquid staking on Ethereum mainnet. Tracks stakes/unstakes and withdrawal requests/claims across the liquid staking, withdrawal, neth and restaking pools.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/node-dao-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - node_dao.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/node_dao_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 16683911
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:node_dao.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 16683911
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges

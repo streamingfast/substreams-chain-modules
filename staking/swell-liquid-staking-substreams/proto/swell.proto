@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package swell.types.v1;
+
+message Events {
+  repeated DepositManagerEthReceived deposit_manager_eth_receiveds = 1;
+  repeated SwexitWithdrawRequestCreated swexit_withdraw_request_createds = 2;
+  repeated SwexitWithdrawalClaimed swexit_withdrawal_claimeds = 3;
+  repeated SwethReprice sweth_reprices = 4;
+  repeated SwethNodeOperatorRewardPercentageUpdate sweth_node_operator_reward_percentage_updates = 5;
+  repeated SwethSwellTreasuryRewardPercentageUpdate sweth_swell_treasury_reward_percentage_updates = 6;
+}
+
+message DepositManagerEthReceived {
+  string id = 1;
+  string from = 2;
+  string amount = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message SwexitWithdrawRequestCreated {
+  string id = 1;
+  string token_id = 2;
+  string amount = 3;
+  string evt_timestamp = 4;
+  string last_token_id_processed = 5;
+  string rate_when_created = 6;
+  string owner = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message SwexitWithdrawalClaimed {
+  string id = 1;
+  string owner = 2;
+  string token_id = 3;
+  string exit_claimed_eth = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message SwethReprice {
+  string id = 1;
+  string new_eth_reserves = 2;
+  string new_sw_eth_to_eth_rate = 3;
+  string node_operator_rewards = 4;
+  string swell_treasury_rewards = 5;
+  string total_eth_deposited = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message SwethNodeOperatorRewardPercentageUpdate {
+  string id = 1;
+  string old_percentage = 2;
+  string new_percentage = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message SwethSwellTreasuryRewardPercentageUpdate {
+  string id = 1;
+  string old_percentage = 2;
+  string new_percentage = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}

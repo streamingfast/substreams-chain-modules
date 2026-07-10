@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package origin_ether.types.v1;
+
+message Events {
+  repeated VaultAssetAllocated vault_asset_allocateds = 1;
+  repeated VaultRedeem vault_redeems = 2;
+  repeated VaultWithdrawalRequested vault_withdrawal_requesteds = 3;
+  repeated VaultWithdrawalClaimed vault_withdrawal_claimeds = 4;
+  repeated VaultYieldDistribution vault_yield_distributions = 5;
+}
+
+message VaultAssetAllocated {
+  string id = 1;
+  string asset = 2;
+  string strategy = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message VaultRedeem {
+  string id = 1;
+  string addr = 2;
+  string value = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message VaultWithdrawalRequested {
+  string id = 1;
+  string withdrawer = 2;
+  string request_id = 3;
+  string amount = 4;
+  string queued = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message VaultWithdrawalClaimed {
+  string id = 1;
+  string withdrawer = 2;
+  string request_id = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message VaultYieldDistribution {
+  string id = 1;
+  string to = 2;
+  string yield_amount = 3;
+  string fee = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}

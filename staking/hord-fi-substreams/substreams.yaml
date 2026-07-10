@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: hord-fi-substreams
+  version: v0.1.0
+  description: Indexes Hord hETH staking on Ethereum mainnet. Tracks hETH token transfers and staking stats updates.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/hord-fi-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - hord.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/hord_fi_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 16583572
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:hord.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 16583572
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges

@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package prime_staked_eth.types.v1;
+
+message Events {
+  repeated LrtConfigAddedNewSupportedAsset lrt_config_added_new_supported_assets = 1;
+  repeated LrtDepositPoolAssetDeposit lrt_deposit_pool_asset_deposits = 2;
+  repeated LrtDepositPoolAssetSwapped lrt_deposit_pool_asset_swappeds = 3;
+  repeated LrtDepositPoolWithdrawalClaimed lrt_deposit_pool_withdrawal_claimeds = 4;
+}
+
+message LrtConfigAddedNewSupportedAsset {
+  string id = 1;
+  string asset = 2;
+  string deposit_limit = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message LrtDepositPoolAssetDeposit {
+  string id = 1;
+  string depositor = 2;
+  string asset = 3;
+  string deposit_amount = 4;
+  string prime_eth_mint_amount = 5;
+  string referral_id = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message LrtDepositPoolAssetSwapped {
+  string id = 1;
+  string from_asset = 2;
+  string to_asset = 3;
+  string from_asset_amount = 4;
+  string to_asset_amount = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message LrtDepositPoolWithdrawalClaimed {
+  string id = 1;
+  string withdrawer = 2;
+  string asset = 3;
+  string assets = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}

@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package kernel.types.v1;
+
+message Events {
+  repeated KrethMintFeeSet kreth_mint_fee_sets = 1;
+  repeated KrethRedeemFeeSet kreth_redeem_fee_sets = 2;
+  repeated KrethDeposit kreth_deposits = 3;
+  repeated KrethRedeemed kreth_redeemeds = 4;
+  repeated KsethMintFeeSet kseth_mint_fee_sets = 5;
+  repeated KsethRedeemFeeSet kseth_redeem_fee_sets = 6;
+  repeated KsethDeposit kseth_deposits = 7;
+  repeated KsethRedeemed kseth_redeemeds = 8;
+  repeated KusdMintFeeSet kusd_mint_fee_sets = 9;
+  repeated KusdRedeemFeeSet kusd_redeem_fee_sets = 10;
+  repeated KusdDeposit kusd_deposits = 11;
+  repeated KusdRedeemed kusd_redeemeds = 12;
+}
+
+message KrethMintFeeSet {
+  string id = 1;
+  string old_fee = 2;
+  string new_fee = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KrethRedeemFeeSet {
+  string id = 1;
+  string old_fee = 2;
+  string new_fee = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KrethDeposit {
+  string id = 1;
+  string staker = 2;
+  string received = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KrethRedeemed {
+  string id = 1;
+  string staker = 2;
+  string burned = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KsethMintFeeSet {
+  string id = 1;
+  string old_fee = 2;
+  string new_fee = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KsethRedeemFeeSet {
+  string id = 1;
+  string old_fee = 2;
+  string new_fee = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KsethDeposit {
+  string id = 1;
+  string staker = 2;
+  string received = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KsethRedeemed {
+  string id = 1;
+  string staker = 2;
+  string burned = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KusdMintFeeSet {
+  string id = 1;
+  string old_fee = 2;
+  string new_fee = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KusdRedeemFeeSet {
+  string id = 1;
+  string old_fee = 2;
+  string new_fee = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KusdDeposit {
+  string id = 1;
+  string staker = 2;
+  string received = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message KusdRedeemed {
+  string id = 1;
+  string staker = 2;
+  string burned = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}

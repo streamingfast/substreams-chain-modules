@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: creth2-substreams
+  version: v0.1.0
+  description: Indexes Cream ETH2 (CRETH2) staking on Ethereum mainnet. Tracks Cream and CRETH2 token transfers.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/creth2-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - creth2.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/creth2_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 13631289
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:creth2.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 13631289
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
