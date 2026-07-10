@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: stake-link-liquid-substreams
+  version: v0.1.0
+  description: Indexes stake-link-liquid on mainnet. TODO refine.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/stake-link-liquid-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - stake_link_liquid.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/stake_link_liquid_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 16118200
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:stake_link_liquid.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 16118200
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges

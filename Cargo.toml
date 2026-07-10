@@ -60,6 +60,11 @@ members = [
     "staking/powh3d-substreams",
     "staking/hyperlock-finance-substreams",
     "staking/lybra-finance-substreams",
+    "staking/stake-link-liquid-substreams",
+    "staking/amphor-substreams",
+    "staking/gogopool-substreams",
+    "staking/rari-vaults-substreams",
+    "staking/euler-finance-substreams",
 ]
 resolver = "2"
 
