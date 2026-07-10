@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package gudchain.types.v1;
+
+message Events {
+  repeated VaultV1Deposit vault_v1_deposits = 1;
+  repeated VaultV1Withdraw vault_v1_withdraws = 2;
+}
+
+message VaultV1Deposit {
+  string id = 1;
+  string token = 2;
+  string user = 3;
+  string deposit_amt = 4;
+  string share_issued = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message VaultV1Withdraw {
+  string id = 1;
+  string token = 2;
+  string user = 3;
+  string amount = 4;
+  string share_burnt = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}

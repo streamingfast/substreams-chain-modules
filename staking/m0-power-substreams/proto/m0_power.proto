@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package m0_power.types.v1;
+
+message Events {
+  repeated MinterCollateralUpdated minter_collateral_updateds = 1;
+}
+
+message MinterCollateralUpdated {
+  string id = 1;
+  string minter = 2;
+  string collateral = 3;
+  string total_resolved_collateral_retrieval = 4;
+  string metadata_hash = 5;
+  string evt_timestamp = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}

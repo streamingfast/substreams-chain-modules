@@ -1,0 +1,33 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "TokensPurchase",
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "depositedAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "purchasedTokens",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalFundsCollected",
+        "type": "uint256"
+      }
+    ]
+  }
+]

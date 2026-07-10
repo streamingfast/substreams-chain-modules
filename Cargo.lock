@@ -18,6 +18,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
+name = "aqua-patina-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -251,6 +266,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "deq-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -476,10 +506,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "friend-tech-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
+
+[[package]]
+name = "fx-protocol-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
+name = "gaurda-staking-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
 
 [[package]]
 name = "generic-array"
@@ -513,6 +588,21 @@ dependencies = [
  "r-efi",
  "wasip2",
  "wasip3",
+]
+
+[[package]]
+name = "gudchain-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
 ]
 
 [[package]]
@@ -816,6 +906,21 @@ checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
 name = "looksrare_substreams"
 version = "0.1.0"
 dependencies = [
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
+name = "m0-power-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
  "ethabi 18.0.0",
  "hex",
  "hex-literal 0.4.1",
@@ -1585,6 +1690,21 @@ dependencies = [
  "quote",
  "syn 1.0.109",
  "thiserror",
+]
+
+[[package]]
+name = "superseed-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
 ]
 
 [[package]]

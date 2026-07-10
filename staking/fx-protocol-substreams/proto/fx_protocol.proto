@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package fx_protocol.types.v1;
+
+message Events {
+  repeated PoolManagerHarvest pool_manager_harvests = 1;
+}
+
+message PoolManagerHarvest {
+  string id = 1;
+  string caller = 2;
+  string pool = 3;
+  string amount_rewards = 4;
+  string amount_funding = 5;
+  string performance_fee = 6;
+  string harvest_bounty = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}

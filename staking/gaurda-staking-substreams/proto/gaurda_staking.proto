@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package gaurda_staking.types.v1;
+
+message Events {
+  repeated GethTransfer geth_transfers = 1;
+}
+
+message GethTransfer {
+  string id = 1;
+  string from = 2;
+  string to = 3;
+  string value = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}

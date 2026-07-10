@@ -29,6 +29,14 @@ members = [
     "staking/liquid-collective-substreams",
     "staking/kernel-protocol-substreams",
     "staking/hord-fi-substreams",
+    "staking/deq-substreams",
+    "staking/friend-tech-substreams",
+    "staking/gaurda-staking-substreams",
+    "staking/m0-power-substreams",
+    "staking/superseed-substreams",
+    "staking/aqua-patina-substreams",
+    "staking/fx-protocol-substreams",
+    "staking/gudchain-substreams",
 ]
 resolver = "2"
 
