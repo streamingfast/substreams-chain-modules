@@ -18,6 +18,7 @@ members = [
     "staking/coinbase-wrapped-staked-eth-substreams",
     "staking/convex-finance-substreams",
     "staking/kelp-dao-substreams",
+    "staking/stader-substreams",
 ]
 resolver = "2"
 

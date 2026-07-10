@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package stader.types.v1;
+
+message Events {
+  repeated Deposit deposits = 1;
+  repeated ExchangeRateUpdate exchange_rate_updates = 2;
+  repeated ProtocolEthRewardsTransferred protocol_eth_rewards = 3;
+  repeated UserEthRewardsTransferred user_eth_rewards = 4;
+  repeated OperatorRewardsClaimed operator_rewards_claimed = 5;
+}
+
+message Deposit {
+  string id = 1;
+  string caller = 2;
+  string owner = 3;
+  string assets = 4;
+  string shares = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message ExchangeRateUpdate {
+  string id = 1;
+  string reporting_block = 2;
+  string total_eth = 3;
+  string ethx_supply = 4;
+  string time = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message ProtocolEthRewardsTransferred {
+  string id = 1;
+  string pool = 2;
+  string eth_rewards = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message UserEthRewardsTransferred {
+  string id = 1;
+  string pool = 2;
+  string eth_rewards = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message OperatorRewardsClaimed {
+  string id = 1;
+  string pool = 2;
+  string recipient = 3;
+  string eth_rewards = 4;
+  string sd_rewards = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}

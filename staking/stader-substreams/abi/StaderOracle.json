@@ -1,0 +1,13 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": false, "internalType": "uint256", "name": "block", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "totalEth", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "ethxSupply", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "time", "type": "uint256" }
+    ],
+    "name": "ExchangeRateUpdated",
+    "type": "event"
+  }
+]

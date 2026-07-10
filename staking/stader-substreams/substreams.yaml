@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: stader-substreams
+  version: v0.1.0
+  description: Indexes Stader Labs liquid staking (ETHx) on Ethereum mainnet. Tracks deposits into the staking pool manager, ETHx exchange-rate updates from the Stader oracle, and protocol/user/operator reward transfers from the socializing pools.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/stader-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - stader.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/stader_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 17416150
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:stader.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 17416150
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
