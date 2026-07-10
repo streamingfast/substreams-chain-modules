@@ -561,6 +561,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
 
 [[package]]
+name = "flat-money-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "foldhash"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -765,6 +780,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyperlock-finance-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "id-arena"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -815,6 +845,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.117",
+]
+
+[[package]]
+name = "inception-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
 ]
 
 [[package]]
@@ -1022,7 +1067,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "lybra-finance-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "m0-power-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
+name = "mantle-staked-eth-substreams"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -1305,6 +1380,21 @@ checksum = "3672b37090dbd86368a4145bc067582552b29c27377cad4e0a306c97f9bd7772"
 dependencies = [
  "fixedbitset 0.5.7",
  "indexmap",
+]
+
+[[package]]
+name = "powh3d-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
 ]
 
 [[package]]
@@ -1725,6 +1815,21 @@ checksum = "77fd7028345d415a4034cf8777cd4f8ab1851274233b45f84e3d955502d93874"
 dependencies = [
  "digest",
  "keccak",
+]
+
+[[package]]
+name = "slisbnb-substreams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi 18.0.0",
+ "hex",
+ "hex-literal 0.4.1",
+ "num-bigint",
+ "prost 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
 ]
 
 [[package]]

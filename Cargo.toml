@@ -53,6 +53,13 @@ members = [
     "staking/beethovenx-sftmx-substreams",
     "staking/benqi-staked-avax-substreams",
     "staking/eigenpie-substreams",
+    "staking/flat-money-substreams",
+    "staking/mantle-staked-eth-substreams",
+    "staking/slisbnb-substreams",
+    "staking/inception-substreams",
+    "staking/powh3d-substreams",
+    "staking/hyperlock-finance-substreams",
+    "staking/lybra-finance-substreams",
 ]
 resolver = "2"
 
