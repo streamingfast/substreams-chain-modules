@@ -23,7 +23,6 @@ members = [
     "staking/dinero-pxeth-substreams",
     "staking/origin-ether-substreams",
     "staking/prime-staked-eth-substreams",
-    "staking/node-dao-substreams",
     "staking/aspida-substreams",
     "staking/creth2-substreams",
     "staking/liquid-collective-substreams",
