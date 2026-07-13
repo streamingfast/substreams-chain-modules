@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package suzaku.types.v1;
+
+message Events {
+  repeated EntityAdded entities_added = 1;
+  repeated Deposit deposits = 2;
+  repeated Withdraw withdrawals = 3;
+}
+
+message EntityAdded {
+  string id = 1;
+  string entity = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message Deposit {
+  string id = 1;
+  string pool = 2;
+  string depositor = 3;
+  string recipient = 4;
+  string amount = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message Withdraw {
+  string id = 1;
+  string pool = 2;
+  string withdrawer = 3;
+  string recipient = 4;
+  string amount = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}

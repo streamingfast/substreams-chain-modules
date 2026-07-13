@@ -1,0 +1,10 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "AddEntity",
+    "inputs": [
+      { "indexed": true, "internalType": "address", "name": "entity", "type": "address" }
+    ]
+  }
+]

@@ -8,6 +8,7 @@ members = [
     "lending/yearn-v2-substreams",
     "nft/looksrare-substreams",
     "nft/seaport-substreams",
+    "staking/suzaku-substreams",
     "staking/eigenlayer-substreams",
     "staking/etherfi-substreams",
     "staking/frax-ether-staking-substreams",
