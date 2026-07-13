@@ -1,0 +1,15 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "PoolRegistered",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "pool",
+        "type": "address"
+      }
+    ]
+  }
+]

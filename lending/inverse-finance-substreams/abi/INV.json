@@ -1,0 +1,21 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "OwnerChanged",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ]
+  }
+]

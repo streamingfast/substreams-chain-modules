@@ -1,0 +1,52 @@
+specVersion: v0.1.0
+
+package:
+  name: tokemak-substreams
+  version: v0.1.0
+  description: Indexes tokemak on ethereum. TODO refine.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/tokemak-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - tokemak.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/tokemak_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: store_pools
+    kind: store
+    updatePolicy: set
+    valueType: string
+    initialBlock: 12912471
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+
+  - name: map_events
+    kind: map
+    initialBlock: 12912471
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+      - store: store_pools
+    output:
+      type: proto:tokemak.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 12912471
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
