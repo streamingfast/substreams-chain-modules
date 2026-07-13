@@ -4,7 +4,12 @@
     "type": "event",
     "name": "AddEntity",
     "inputs": [
-      { "indexed": true, "internalType": "address", "name": "entity", "type": "address" }
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "entity",
+        "type": "address"
+      }
     ]
   }
 ]

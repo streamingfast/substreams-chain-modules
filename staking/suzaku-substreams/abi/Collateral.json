@@ -4,9 +4,24 @@
     "type": "event",
     "name": "Deposit",
     "inputs": [
-      { "indexed": true, "internalType": "address", "name": "depositor", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "recipient", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "depositor",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ]
   },
   {
@@ -14,9 +29,24 @@
     "type": "event",
     "name": "Withdraw",
     "inputs": [
-      { "indexed": true, "internalType": "address", "name": "withdrawer", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "recipient", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "withdrawer",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
     ]
   }
 ]

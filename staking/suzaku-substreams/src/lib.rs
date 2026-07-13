@@ -8,7 +8,9 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::suzaku::types::v1::{Deposit, EntityAdded, Events, Withdraw};
+use crate::pb::suzaku::types::v1::{
+    Events, CollateralDeposit, CollateralFactoryAddEntity, CollateralWithdraw,
+};
 
 const FACTORY: [u8; 20] = hex_literal::hex!("e5296638aa86bd4175d802a210e158688e41a93c");
 
@@ -24,7 +26,6 @@ fn block_timestamp(block: &Block) -> u64 {
         .unwrap_or(0)
 }
 
-// Record every Collateral contract spawned by the factory, keyed by its address.
 #[substreams::handlers::store]
 pub fn store_pools(block: Block, store: StoreSetString) {
     for trx in block.transactions() {
@@ -55,7 +56,7 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                 if let Some(ev) =
                     abi::collateral_factory::events::AddEntity::match_and_decode(log)
                 {
-                    events.entities_added.push(EntityAdded {
+                    events.collateral_factory_add_entitys.push(CollateralFactoryAddEntity {
                         id: id.clone(),
                         entity: fmt_addr(&ev.entity),
                         tx_hash: tx_hash.clone(),
@@ -67,12 +68,12 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                 }
             }
 
-            // Template events: only decode logs from factory-created Collateral contracts.
             if store.get_last(fmt_addr(log.address())).is_some() {
                 let pool = fmt_addr(log.address());
-
-                if let Some(ev) = abi::collateral::events::Deposit::match_and_decode(log) {
-                    events.deposits.push(Deposit {
+                if let Some(ev) =
+                    abi::collateral::events::Deposit::match_and_decode(log)
+                {
+                    events.collateral_deposits.push(CollateralDeposit {
                         id: id.clone(),
                         pool: pool.clone(),
                         depositor: fmt_addr(&ev.depositor),
@@ -85,9 +86,10 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                     });
                     continue;
                 }
-
-                if let Some(ev) = abi::collateral::events::Withdraw::match_and_decode(log) {
-                    events.withdrawals.push(Withdraw {
+                if let Some(ev) =
+                    abi::collateral::events::Withdraw::match_and_decode(log)
+                {
+                    events.collateral_withdraws.push(CollateralWithdraw {
                         id: id.clone(),
                         pool: pool.clone(),
                         withdrawer: fmt_addr(&ev.withdrawer),
@@ -98,8 +100,10 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                         block_num: block.number,
                         timestamp,
                     });
+                    continue;
                 }
             }
+
         }
     }
 
@@ -110,9 +114,9 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
 pub fn db_out(events: Events) -> Result<DatabaseChanges, Error> {
     let mut tables = Tables::new();
 
-    for e in events.entities_added {
+    for e in events.collateral_factory_add_entitys {
         tables
-            .create_row("entities_added", &e.id)
+            .create_row("collateral_factory_add_entity", &e.id)
             .set("entity", &e.entity)
             .set("tx_hash", &e.tx_hash)
             .set("log_index", e.log_index as i64)
@@ -120,9 +124,9 @@ pub fn db_out(events: Events) -> Result<DatabaseChanges, Error> {
             .set("timestamp", e.timestamp as i64);
     }
 
-    for e in events.deposits {
+    for e in events.collateral_deposits {
         tables
-            .create_row("deposits", &e.id)
+            .create_row("collateral_deposit", &e.id)
             .set("pool", &e.pool)
             .set("depositor", &e.depositor)
             .set("recipient", &e.recipient)
@@ -133,9 +137,9 @@ pub fn db_out(events: Events) -> Result<DatabaseChanges, Error> {
             .set("timestamp", e.timestamp as i64);
     }
 
-    for e in events.withdrawals {
+    for e in events.collateral_withdraws {
         tables
-            .create_row("withdrawals", &e.id)
+            .create_row("collateral_withdraw", &e.id)
             .set("pool", &e.pool)
             .set("withdrawer", &e.withdrawer)
             .set("recipient", &e.recipient)

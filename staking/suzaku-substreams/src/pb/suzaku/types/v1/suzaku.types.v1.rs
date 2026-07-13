@@ -3,14 +3,14 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Events {
     #[prost(message, repeated, tag = "1")]
-    pub entities_added: ::prost::alloc::vec::Vec<EntityAdded>,
+    pub collateral_factory_add_entitys: ::prost::alloc::vec::Vec<CollateralFactoryAddEntity>,
     #[prost(message, repeated, tag = "2")]
-    pub deposits: ::prost::alloc::vec::Vec<Deposit>,
+    pub collateral_deposits: ::prost::alloc::vec::Vec<CollateralDeposit>,
     #[prost(message, repeated, tag = "3")]
-    pub withdrawals: ::prost::alloc::vec::Vec<Withdraw>,
+    pub collateral_withdraws: ::prost::alloc::vec::Vec<CollateralWithdraw>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct EntityAdded {
+pub struct CollateralFactoryAddEntity {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
@@ -25,7 +25,7 @@ pub struct EntityAdded {
     pub timestamp: u64,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct Deposit {
+pub struct CollateralDeposit {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
@@ -46,7 +46,7 @@ pub struct Deposit {
     pub timestamp: u64,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct Withdraw {
+pub struct CollateralWithdraw {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]

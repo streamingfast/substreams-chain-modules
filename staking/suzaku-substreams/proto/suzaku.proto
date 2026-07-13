@@ -3,12 +3,12 @@ syntax = "proto3";
 package suzaku.types.v1;
 
 message Events {
-  repeated EntityAdded entities_added = 1;
-  repeated Deposit deposits = 2;
-  repeated Withdraw withdrawals = 3;
+  repeated CollateralFactoryAddEntity collateral_factory_add_entitys = 1;
+  repeated CollateralDeposit collateral_deposits = 2;
+  repeated CollateralWithdraw collateral_withdraws = 3;
 }
 
-message EntityAdded {
+message CollateralFactoryAddEntity {
   string id = 1;
   string entity = 2;
   string tx_hash = 3;
@@ -17,7 +17,7 @@ message EntityAdded {
   uint64 timestamp = 6;
 }
 
-message Deposit {
+message CollateralDeposit {
   string id = 1;
   string pool = 2;
   string depositor = 3;
@@ -29,7 +29,7 @@ message Deposit {
   uint64 timestamp = 9;
 }
 
-message Withdraw {
+message CollateralWithdraw {
   string id = 1;
   string pool = 2;
   string withdrawer = 3;
