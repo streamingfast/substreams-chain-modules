@@ -49,7 +49,6 @@ members = [
     "staking/stcelo-substreams",
     "staking/tensorplex-substreams",
     "staking/tether-gold-substreams",
-    "staking/beethovenx-sftmx-substreams",
     "staking/benqi-staked-avax-substreams",
     "staking/eigenpie-substreams",
     "staking/flat-money-substreams",
