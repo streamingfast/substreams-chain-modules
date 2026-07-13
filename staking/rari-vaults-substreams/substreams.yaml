@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: rari-vaults-substreams
   version: v0.1.0
-  description: Indexes rari-vaults on mainnet. TODO refine.
+  description: Indexes Rari Capital fund managers (DAI, USDC, ETH, Yield) on Ethereum. Tracks deposits and withdrawals across the vaults.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/rari-vaults-substreams
 
 imports:

@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: m0-power-substreams
   version: v0.1.0
-  description: Indexes m0-power on mainnet. TODO refine.
+  description: Indexes M^0 Protocol on Ethereum. Tracks collateral updates on the Minter backing the M stablecoin.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/m0-power-substreams
 
 imports:

@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: matrixdock-substreams
   version: v0.1.0
-  description: Indexes matrixdock on mainnet. TODO refine.
+  description: Indexes Matrixdock Short-term Treasury Bill token (STBT) on Ethereum. Tracks transfers and interest distributions.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/matrixdock-substreams
 
 imports:

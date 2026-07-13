@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: aqua-patina-substreams
   version: v0.1.0
-  description: Indexes aqua-patina on mainnet. TODO refine.
+  description: Indexes Aqua Patina staked ETH (apETH) on Ethereum. Tracks apETH transfers and early-deposit mints.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/aqua-patina-substreams
 
 imports:

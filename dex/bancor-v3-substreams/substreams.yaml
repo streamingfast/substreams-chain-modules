@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: bancor-v3-substreams
   version: v0.1.0
-  description: Indexes bancor-v3 on ethereum. TODO refine.
+  description: Indexes Bancor V3 on Ethereum. Tracks pool collections created by BancorNetwork and the deposits, withdrawals, trades, and trading-fee updates on each pool, plus standard rewards programs.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/dex/bancor-v3-substreams
 
 imports:

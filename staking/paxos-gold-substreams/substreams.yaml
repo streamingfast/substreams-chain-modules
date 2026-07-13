@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: paxos-gold-substreams
   version: v0.1.0
-  description: Indexes paxos-gold on mainnet. TODO refine.
+  description: Indexes PAX Gold (PAXG) on Ethereum. Tracks transfers and fee collection for the gold-backed token.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/paxos-gold-substreams
 
 imports:

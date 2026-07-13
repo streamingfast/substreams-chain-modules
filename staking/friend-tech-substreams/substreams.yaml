@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: friend-tech-substreams
   version: v0.1.0
-  description: Indexes friend-tech on base. TODO refine.
+  description: Indexes friend.tech on Base. Tracks share (key) buy and sell trades on the SocialFi bonding-curve contract.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/friend-tech-substreams
 
 imports:

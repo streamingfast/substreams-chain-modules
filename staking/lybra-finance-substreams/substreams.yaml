@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: lybra-finance-substreams
   version: v0.1.0
-  description: Indexes lybra-finance on mainnet. TODO refine.
+  description: Indexes Lybra Finance V1 on Ethereum. Tracks eUSD mints, burns, and fee distribution for the LST-backed stablecoin.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/lybra-finance-substreams
 
 imports:

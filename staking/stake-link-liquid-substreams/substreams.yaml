@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: stake-link-liquid-substreams
   version: v0.1.0
-  description: Indexes stake-link-liquid on mainnet. TODO refine.
+  description: Indexes stake.link liquid staking (stLINK) on Ethereum. Tracks priority-pool deposits, unqueues, withdrawals, and strategy reward updates.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/stake-link-liquid-substreams
 
 imports:

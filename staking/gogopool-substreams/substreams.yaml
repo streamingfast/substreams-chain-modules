@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: gogopool-substreams
   version: v0.1.0
-  description: Indexes gogopool on avalanche. TODO refine.
+  description: Indexes GoGoPool liquid staked AVAX (ggAVAX) on Avalanche. Tracks deposits, withdrawals, staking flows, and reward cycles.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/gogopool-substreams
 
 imports:

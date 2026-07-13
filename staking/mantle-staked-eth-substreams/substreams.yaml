@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: mantle-staked-eth-substreams
   version: v0.1.0
-  description: Indexes mantle-staked-eth on mainnet. TODO refine.
+  description: Indexes Mantle Staked ETH (mETH) on Ethereum. Tracks staking, unstake requests and claims, and protocol fee collection.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/mantle-staked-eth-substreams
 
 imports:

@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: flat-money-substreams
   version: v0.1.0
-  description: Indexes flat-money on base. TODO refine.
+  description: Indexes Flat Money on Base. Tracks UNIT deposits and withdrawals and delayed-order execution for the leveraged protocol.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/flat-money-substreams
 
 imports:

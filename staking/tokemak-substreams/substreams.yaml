@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: tokemak-substreams
   version: v0.1.0
-  description: Indexes tokemak on ethereum. TODO refine.
+  description: Indexes Tokemak on Ethereum. Tracks pools (reactors) registered by the Manager and the withdrawal requests on each, plus reward claims.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/tokemak-substreams
 
 imports:

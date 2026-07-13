@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: fx-protocol-substreams
   version: v0.1.0
-  description: Indexes fx-protocol on mainnet. TODO refine.
+  description: Indexes f(x) Protocol on Ethereum. Tracks harvest events on the PoolManager.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/fx-protocol-substreams
 
 imports:

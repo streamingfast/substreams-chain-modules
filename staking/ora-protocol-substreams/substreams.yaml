@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: ora-protocol-substreams
   version: v0.1.0
-  description: Indexes ora-protocol on mainnet. TODO refine.
+  description: Indexes ORA staked ETH on Ethereum. Tracks stakes, withdrawal requests, and withdrawal claims.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/ora-protocol-substreams
 
 imports:

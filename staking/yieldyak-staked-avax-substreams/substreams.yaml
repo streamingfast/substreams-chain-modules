@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: yieldyak-staked-avax-substreams
   version: v0.1.0
-  description: Indexes yieldyak-staked-avax on avalanche. TODO refine.
+  description: Indexes Yield Yak staked AVAX (yyAVAX) on Avalanche. Tracks yyAVAX ERC-1155 transfers.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/yieldyak-staked-avax-substreams
 
 imports:

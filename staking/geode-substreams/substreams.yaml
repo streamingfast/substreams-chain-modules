@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: geode-substreams
   version: v0.1.0
-  description: Indexes geode on avalanche. TODO refine.
+  description: Indexes Geode Finance staked AVAX (gAVAX) on Avalanche. Tracks gAVAX transfers and portal proposal approvals.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/geode-substreams
 
 imports:

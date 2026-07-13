@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: tensorplex-substreams
   version: v0.1.0
-  description: Indexes tensorplex on mainnet. TODO refine.
+  description: Indexes Tensorplex staked TAO (stTAO) on Ethereum. Tracks user stakes, unstakes, and unstake requests.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/tensorplex-substreams
 
 imports:

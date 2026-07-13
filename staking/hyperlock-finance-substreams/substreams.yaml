@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: hyperlock-finance-substreams
   version: v0.1.0
-  description: Indexes hyperlock-finance on blast-mainnet. TODO refine.
+  description: Indexes Hyperlock Finance on Blast. Tracks ERC-20 and ERC-721 point deposits and stakes plus Thruster liquidity positions.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/hyperlock-finance-substreams
 
 imports:

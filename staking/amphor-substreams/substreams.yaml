@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: amphor-substreams
   version: v0.1.0
-  description: Indexes amphor on mainnet. TODO refine.
+  description: Indexes Amphor restaking vaults on Ethereum. Tracks deposits and withdrawals on the Amphor LRT vault.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/amphor-substreams
 
 imports:

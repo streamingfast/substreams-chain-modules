@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: inverse-finance-substreams
   version: v0.1.0
-  description: Indexes inverse-finance on ethereum. TODO refine.
+  description: Indexes Inverse Finance (Frontier) on Ethereum. Tracks cToken markets listed by the Comptroller and the mints, redeems, borrows, repays, and liquidations on each market, plus DOLA and the Stabilizer.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/lending/inverse-finance-substreams
 
 imports:
