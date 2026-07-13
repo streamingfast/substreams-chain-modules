@@ -1,0 +1,11 @@
+version: v1
+plugins:
+- plugin: prost
+  out: src/pb
+  opt:
+    - file_descriptor_set=false
+
+- plugin: prost-crate
+  out: src/pb
+  opt:
+    - no_features

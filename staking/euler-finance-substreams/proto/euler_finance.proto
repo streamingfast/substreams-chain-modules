@@ -1,0 +1,149 @@
+syntax = "proto3";
+
+package euler_finance.types.v1;
+
+message Events {
+  repeated EulerAssetStatus euler_asset_statuss = 1;
+  repeated EulerBorrow euler_borrows = 2;
+  repeated EulerDeposit euler_deposits = 3;
+  repeated EulerGovConvertReserves euler_gov_convert_reservess = 4;
+  repeated EulerGovSetReserveFee euler_gov_set_reserve_fees = 5;
+  repeated EulerGovSetPricingConfig euler_gov_set_pricing_configs = 6;
+  repeated EulerLiquidation euler_liquidations = 7;
+  repeated EulerMarketActivated euler_market_activateds = 8;
+  repeated EulerRepay euler_repays = 9;
+  repeated EulerWithdraw euler_withdraws = 10;
+  repeated EulStakesStake eul_stakes_stakes = 11;
+}
+
+message EulerAssetStatus {
+  string id = 1;
+  string underlying = 2;
+  string total_balances = 3;
+  string total_borrows = 4;
+  string reserve_balance = 5;
+  string pool_size = 6;
+  string interest_accumulator = 7;
+  string interest_rate = 8;
+  string evt_timestamp = 9;
+  string tx_hash = 10;
+  uint64 log_index = 11;
+  uint64 block_num = 12;
+  uint64 timestamp = 13;
+}
+
+message EulerBorrow {
+  string id = 1;
+  string underlying = 2;
+  string account = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message EulerDeposit {
+  string id = 1;
+  string underlying = 2;
+  string account = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message EulerGovConvertReserves {
+  string id = 1;
+  string underlying = 2;
+  string recipient = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message EulerGovSetReserveFee {
+  string id = 1;
+  string underlying = 2;
+  string new_reserve_fee = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message EulerGovSetPricingConfig {
+  string id = 1;
+  string underlying = 2;
+  string new_pricing_type = 3;
+  string new_pricing_parameter = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message EulerLiquidation {
+  string id = 1;
+  string liquidator = 2;
+  string violator = 3;
+  string underlying = 4;
+  string collateral = 5;
+  string repay = 6;
+  string evt_yield = 7;
+  string health_score = 8;
+  string base_discount = 9;
+  string discount = 10;
+  string tx_hash = 11;
+  uint64 log_index = 12;
+  uint64 block_num = 13;
+  uint64 timestamp = 14;
+}
+
+message EulerMarketActivated {
+  string id = 1;
+  string underlying = 2;
+  string e_token = 3;
+  string d_token = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message EulerRepay {
+  string id = 1;
+  string underlying = 2;
+  string account = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message EulerWithdraw {
+  string id = 1;
+  string underlying = 2;
+  string account = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message EulStakesStake {
+  string id = 1;
+  string who = 2;
+  string underlying = 3;
+  string sender = 4;
+  string new_amount = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}

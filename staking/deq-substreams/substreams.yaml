@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: deq-substreams
+  version: v0.1.0
+  description: Indexes deq on mainnet. TODO refine.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/deq-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - deq.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/deq_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 20366026
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:deq.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 20366026
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges

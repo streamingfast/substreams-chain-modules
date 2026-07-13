@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package rari_vaults.types.v1;
+
+message Events {
+  repeated RariUsdcFundManagerDeposit rari_usdc_fund_manager_deposits = 1;
+  repeated RariUsdcFundManagerWithdrawal rari_usdc_fund_manager_withdrawals = 2;
+  repeated RariYieldFundManagerDeposit rari_yield_fund_manager_deposits = 3;
+  repeated RariYieldFundManagerWithdrawal rari_yield_fund_manager_withdrawals = 4;
+  repeated RariDaiFundManagerDeposit rari_dai_fund_manager_deposits = 5;
+  repeated RariDaiFundManagerWithdrawal rari_dai_fund_manager_withdrawals = 6;
+  repeated RariEtherFundManagerDeposit rari_ether_fund_manager_deposits = 7;
+  repeated RariEtherFundManagerWithdrawal rari_ether_fund_manager_withdrawals = 8;
+}
+
+message RariUsdcFundManagerDeposit {
+  string id = 1;
+  string currency_code = 2;
+  string sender = 3;
+  string payee = 4;
+  string amount = 5;
+  string amount_usd = 6;
+  string rft_minted = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message RariUsdcFundManagerWithdrawal {
+  string id = 1;
+  string currency_code = 2;
+  string sender = 3;
+  string payee = 4;
+  string amount = 5;
+  string amount_usd = 6;
+  string rft_burned = 7;
+  string withdrawal_fee_rate = 8;
+  string tx_hash = 9;
+  uint64 log_index = 10;
+  uint64 block_num = 11;
+  uint64 timestamp = 12;
+}
+
+message RariYieldFundManagerDeposit {
+  string id = 1;
+  string currency_code = 2;
+  string sender = 3;
+  string payee = 4;
+  string amount = 5;
+  string amount_usd = 6;
+  string rft_minted = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message RariYieldFundManagerWithdrawal {
+  string id = 1;
+  string currency_code = 2;
+  string sender = 3;
+  string payee = 4;
+  string amount = 5;
+  string amount_usd = 6;
+  string rft_burned = 7;
+  string withdrawal_fee_rate = 8;
+  string amount_transferred = 9;
+  string tx_hash = 10;
+  uint64 log_index = 11;
+  uint64 block_num = 12;
+  uint64 timestamp = 13;
+}
+
+message RariDaiFundManagerDeposit {
+  string id = 1;
+  string currency_code = 2;
+  string sender = 3;
+  string payee = 4;
+  string amount = 5;
+  string amount_usd = 6;
+  string rft_minted = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message RariDaiFundManagerWithdrawal {
+  string id = 1;
+  string currency_code = 2;
+  string sender = 3;
+  string payee = 4;
+  string amount = 5;
+  string amount_usd = 6;
+  string rft_burned = 7;
+  string withdrawal_fee_rate = 8;
+  string tx_hash = 9;
+  uint64 log_index = 10;
+  uint64 block_num = 11;
+  uint64 timestamp = 12;
+}
+
+message RariEtherFundManagerDeposit {
+  string id = 1;
+  string sender = 2;
+  string payee = 3;
+  string amount = 4;
+  string rept_minted = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message RariEtherFundManagerWithdrawal {
+  string id = 1;
+  string sender = 2;
+  string payee = 3;
+  string amount = 4;
+  string rept_burned = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}

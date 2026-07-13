@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package superseed.types.v1;
+
+message Events {
+  repeated SuperSaleDepositTokensPurchase super_sale_deposit_tokens_purchases = 1;
+}
+
+message SuperSaleDepositTokensPurchase {
+  string id = 1;
+  string user = 2;
+  string deposited_amount = 3;
+  string purchased_tokens = 4;
+  string total_funds_collected = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}

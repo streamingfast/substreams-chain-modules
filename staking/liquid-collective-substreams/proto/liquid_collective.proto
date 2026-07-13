@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package liquid_collective.types.v1;
+
+message Events {
+  repeated LsethPulledElFees lseth_pulled_el_feess = 1;
+  repeated LsethUserDeposit lseth_user_deposits = 2;
+  repeated RedeemManagerRequestedRedeem redeem_manager_requested_redeems = 3;
+  repeated RedeemManagerClaimedRedeemRequest redeem_manager_claimed_redeem_requests = 4;
+}
+
+message LsethPulledElFees {
+  string id = 1;
+  string amount = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message LsethUserDeposit {
+  string id = 1;
+  string depositor = 2;
+  string recipient = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message RedeemManagerRequestedRedeem {
+  string id = 1;
+  string owner = 2;
+  string height = 3;
+  string amount = 4;
+  string max_redeemable_eth = 5;
+  string evt_id = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message RedeemManagerClaimedRedeemRequest {
+  string id = 1;
+  string redeem_request_id = 2;
+  string recipient = 3;
+  string eth_amount = 4;
+  string ls_eth_amount = 5;
+  string remaining_ls_eth_amount = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}

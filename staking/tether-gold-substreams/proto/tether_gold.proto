@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package tether_gold.types.v1;
+
+message Events {
+  repeated XautTransfer xaut_transfers = 1;
+  repeated XautMint xaut_mints = 2;
+  repeated XautRedeem xaut_redeems = 3;
+}
+
+message XautTransfer {
+  string id = 1;
+  string from = 2;
+  string to = 3;
+  string value = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message XautMint {
+  string id = 1;
+  string destination = 2;
+  string amount = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message XautRedeem {
+  string id = 1;
+  string amount = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}

@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package mev_protocol.types.v1;
+
+message Events {
+  repeated MevethDeposit meveth_deposits = 1;
+  repeated MevethWithdraw meveth_withdraws = 2;
+  repeated MevethRewards meveth_rewardss = 3;
+}
+
+message MevethDeposit {
+  string id = 1;
+  string caller = 2;
+  string owner = 3;
+  string assets = 4;
+  string shares = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message MevethWithdraw {
+  string id = 1;
+  string caller = 2;
+  string receiver = 3;
+  string owner = 4;
+  string assets = 5;
+  string shares = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message MevethRewards {
+  string id = 1;
+  string sender = 2;
+  string amount = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}

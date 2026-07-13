@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: friend-tech-substreams
+  version: v0.1.0
+  description: Indexes friend-tech on base. TODO refine.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/friend-tech-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - friend_tech.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/friend_tech_substreams.wasm
+
+network: base
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 2430440
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:friend_tech.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 2430440
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges

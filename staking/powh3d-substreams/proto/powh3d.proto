@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package powh3d.types.v1;
+
+message Events {
+  repeated HourglassOnTokenPurchase hourglass_on_token_purchases = 1;
+  repeated HourglassOnTokenSell hourglass_on_token_sells = 2;
+  repeated HourglassOnReinvestment hourglass_on_reinvestments = 3;
+  repeated HourglassOnWithdraw hourglass_on_withdraws = 4;
+  repeated HourglassTransfer hourglass_transfers = 5;
+}
+
+message HourglassOnTokenPurchase {
+  string id = 1;
+  string customer_address = 2;
+  string incoming_ethereum = 3;
+  string tokens_minted = 4;
+  string referred_by = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message HourglassOnTokenSell {
+  string id = 1;
+  string customer_address = 2;
+  string tokens_burned = 3;
+  string ethereum_earned = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message HourglassOnReinvestment {
+  string id = 1;
+  string customer_address = 2;
+  string ethereum_reinvested = 3;
+  string tokens_minted = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message HourglassOnWithdraw {
+  string id = 1;
+  string customer_address = 2;
+  string ethereum_withdrawn = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message HourglassTransfer {
+  string id = 1;
+  string from = 2;
+  string to = 3;
+  string tokens = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}

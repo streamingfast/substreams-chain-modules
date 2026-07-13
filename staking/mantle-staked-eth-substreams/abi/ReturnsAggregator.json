@@ -1,0 +1,15 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "FeesCollected",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ]
+  }
+]

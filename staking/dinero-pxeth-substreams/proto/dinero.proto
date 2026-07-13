@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package dinero.types.v1;
+
+message Events {
+  repeated PirexEthDeposit pirex_eth_deposits = 1;
+  repeated PirexEthValidatorDeposit pirex_eth_validator_deposits = 2;
+  repeated PirexEthEmergencyWithdrawal pirex_eth_emergency_withdrawals = 3;
+  repeated PirexEthInitiateRedemption pirex_eth_initiate_redemptions = 4;
+  repeated PirexEthRedeemWithPxEth pirex_eth_redeem_with_px_eths = 5;
+  repeated PirexFeesDistributeFees pirex_fees_distribute_feess = 6;
+}
+
+message PirexEthDeposit {
+  string id = 1;
+  string caller = 2;
+  string receiver = 3;
+  string should_compound = 4;
+  string deposited = 5;
+  string received_amount = 6;
+  string fee_amount = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message PirexEthValidatorDeposit {
+  string id = 1;
+  string pub_key = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message PirexEthEmergencyWithdrawal {
+  string id = 1;
+  string receiver = 2;
+  string token = 3;
+  string amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message PirexEthInitiateRedemption {
+  string id = 1;
+  string assets = 2;
+  string post_fee_amount = 3;
+  string receiver = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message PirexEthRedeemWithPxEth {
+  string id = 1;
+  string assets = 2;
+  string post_fee_amount = 3;
+  string receiver = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message PirexFeesDistributeFees {
+  string id = 1;
+  string token = 2;
+  string amount = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}

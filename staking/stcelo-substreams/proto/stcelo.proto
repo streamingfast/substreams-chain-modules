@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package stcelo.types.v1;
+
+message Events {
+  repeated StceloVotesScheduled stcelo_votes_scheduleds = 1;
+  repeated StceloCeloWithdrawalScheduled stcelo_celo_withdrawal_scheduleds = 2;
+  repeated StceloCeloWithdrawalStarted stcelo_celo_withdrawal_starteds = 3;
+}
+
+message StceloVotesScheduled {
+  string id = 1;
+  string group = 2;
+  string amount = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message StceloCeloWithdrawalScheduled {
+  string id = 1;
+  string beneficiary = 2;
+  string group = 3;
+  string withdrawal_amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message StceloCeloWithdrawalStarted {
+  string id = 1;
+  string beneficiary = 2;
+  string group = 3;
+  string withdrawal_amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}

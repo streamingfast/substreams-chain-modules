@@ -1,0 +1,39 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "CollateralUpdated",
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "minter",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint240",
+        "name": "collateral",
+        "type": "uint240"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint240",
+        "name": "totalResolvedCollateralRetrieval",
+        "type": "uint240"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "metadataHash",
+        "type": "bytes32"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint40",
+        "name": "timestamp",
+        "type": "uint40"
+      }
+    ]
+  }
+]

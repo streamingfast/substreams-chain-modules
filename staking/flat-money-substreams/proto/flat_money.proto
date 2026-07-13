@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package flat_money.types.v1;
+
+message Events {
+  repeated UnitDeposit unit_deposits = 1;
+  repeated UnitWithdraw unit_withdraws = 2;
+  repeated DelayedOrderOrderExecuted delayed_order_order_executeds = 3;
+}
+
+message UnitDeposit {
+  string id = 1;
+  string depositor = 2;
+  string deposit_amount = 3;
+  string minted_amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message UnitWithdraw {
+  string id = 1;
+  string withdrawer = 2;
+  string withdraw_amount = 3;
+  string burned_amount = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message DelayedOrderOrderExecuted {
+  string id = 1;
+  string account = 2;
+  string order_type = 3;
+  string keeper_fee = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}

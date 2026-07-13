@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package amphor.types.v1;
+
+message Events {
+  repeated LrtVaultDeposit lrt_vault_deposits = 1;
+  repeated LrtVaultWithdraw lrt_vault_withdraws = 2;
+}
+
+message LrtVaultDeposit {
+  string id = 1;
+  string sender = 2;
+  string owner = 3;
+  string assets = 4;
+  string shares = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message LrtVaultWithdraw {
+  string id = 1;
+  string sender = 2;
+  string receiver = 3;
+  string owner = 4;
+  string assets = 5;
+  string shares = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}

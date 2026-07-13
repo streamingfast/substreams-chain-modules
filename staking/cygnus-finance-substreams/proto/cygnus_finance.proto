@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package cygnus_finance.types.v1;
+
+message Events {
+  repeated CgusdInvested cgusd_investeds = 1;
+  repeated CgusdSharesBurnt cgusd_shares_burnts = 2;
+  repeated CgusdSubmitted cgusd_submitteds = 3;
+}
+
+message CgusdInvested {
+  string id = 1;
+  string amount = 2;
+  string post_buffered_assets = 3;
+  string post_invested_assets = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message CgusdSharesBurnt {
+  string id = 1;
+  string account = 2;
+  string pre_rebase_token_amount = 3;
+  string post_rebase_token_amount = 4;
+  string shares_amount = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message CgusdSubmitted {
+  string id = 1;
+  string sender = 2;
+  string amount = 3;
+  string referral = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}

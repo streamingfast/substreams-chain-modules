@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: gaurda-staking-substreams
+  version: v0.1.0
+  description: Indexes gaurda-staking on mainnet. TODO refine.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/gaurda-staking-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - gaurda_staking.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/gaurda_staking_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 13455313
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:gaurda_staking.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 13455313
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges

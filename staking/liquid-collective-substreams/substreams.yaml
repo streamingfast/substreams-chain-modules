@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+
+package:
+  name: liquid-collective-substreams
+  version: v0.1.0
+  description: Indexes Liquid Collective (LsETH) staking on Ethereum mainnet. Tracks user deposits, execution-layer fee pulls, and redeem requests/claims.
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/liquid-collective-substreams
+
+imports:
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - liquid_collective.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/liquid_collective_substreams.wasm
+
+network: mainnet
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 15676402
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:liquid_collective.types.v1.Events
+
+  - name: db_out
+    kind: map
+    initialBlock: 15676402
+    inputs:
+      - map: map_events
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges

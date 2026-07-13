@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package friend_tech.types.v1;
+
+message Events {
+  repeated SharesTrade shares_trades = 1;
+}
+
+message SharesTrade {
+  string id = 1;
+  string trader = 2;
+  string subject = 3;
+  string is_buy = 4;
+  string share_amount = 5;
+  string eth_amount = 6;
+  string protocol_eth_amount = 7;
+  string subject_eth_amount = 8;
+  string supply = 9;
+  string tx_hash = 10;
+  uint64 log_index = 11;
+  uint64 block_num = 12;
+  uint64 timestamp = 13;
+}

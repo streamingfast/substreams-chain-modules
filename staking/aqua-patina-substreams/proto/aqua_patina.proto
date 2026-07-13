@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package aqua_patina.types.v1;
+
+message Events {
+  repeated ApethTransfer apeth_transfers = 1;
+  repeated ApethEarlyDepositsMinted apeth_early_deposits_minteds = 2;
+}
+
+message ApethTransfer {
+  string id = 1;
+  string from = 2;
+  string to = 3;
+  string value = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message ApethEarlyDepositsMinted {
+  string id = 1;
+  string recipient = 2;
+  string amount = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
