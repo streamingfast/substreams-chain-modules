@@ -33,10 +33,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == GGAVAX {
+            if log.address() == GGAVAX.as_slice() {
                 if let Some(ev) =
                     abi::ggavax::events::Deposit::match_and_decode(log)
                 {
@@ -47,7 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         assets: ev.assets.to_string(),
                         shares: ev.shares.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -62,7 +62,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         base_amt: ev.base_amt.to_string(),
                         rewards_amt: ev.rewards_amt.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -79,7 +79,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         assets: ev.assets.to_string(),
                         shares: ev.shares.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -93,7 +93,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         caller: fmt_addr(&ev.caller),
                         assets: ev.assets.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -107,7 +107,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         cycle_end: ev.cycle_end.to_string(),
                         rewards_amt: ev.rewards_amt.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

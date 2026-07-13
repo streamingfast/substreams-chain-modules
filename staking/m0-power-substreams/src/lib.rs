@@ -33,10 +33,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == MINTER {
+            if log.address() == MINTER.as_slice() {
                 if let Some(ev) =
                     abi::minter::events::CollateralUpdated::match_and_decode(log)
                 {
@@ -48,7 +48,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         metadata_hash: fmt_addr(&ev.metadata_hash),
                         evt_timestamp: ev.timestamp.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

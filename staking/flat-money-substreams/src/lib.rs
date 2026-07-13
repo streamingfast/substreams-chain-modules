@@ -35,10 +35,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == UNIT {
+            if log.address() == UNIT.as_slice() {
                 if let Some(ev) =
                     abi::unit::events::Deposit::match_and_decode(log)
                 {
@@ -48,7 +48,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         deposit_amount: ev.deposit_amount.to_string(),
                         minted_amount: ev.minted_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -63,7 +63,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         withdraw_amount: ev.withdraw_amount.to_string(),
                         burned_amount: ev.burned_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -71,10 +71,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == LIQUIDATION_MODULE {
+            if log.address() == LIQUIDATION_MODULE.as_slice() {
             }
 
-            if log.address == DELAYED_ORDER {
+            if log.address() == DELAYED_ORDER.as_slice() {
                 if let Some(ev) =
                     abi::delayed_order::events::OrderExecuted::match_and_decode(log)
                 {
@@ -84,7 +84,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         order_type: ev.order_type.to_string(),
                         keeper_fee: ev.keeper_fee.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

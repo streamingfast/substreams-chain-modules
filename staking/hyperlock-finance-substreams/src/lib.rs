@@ -35,10 +35,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == THRUSTER_POINT_NFT {
+            if log.address() == THRUSTER_POINT_NFT.as_slice() {
                 if let Some(ev) =
                     abi::thruster_point_nft::events::IncreaseLiquidity::match_and_decode(log)
                 {
@@ -52,7 +52,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         tick_upper: ev.tick_upper.to_string(),
                         pool: fmt_addr(&ev.pool),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -71,7 +71,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         tick_upper: ev.tick_upper.to_string(),
                         pool: fmt_addr(&ev.pool),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -79,7 +79,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == ERC20_POINTS_DEPOSIT {
+            if log.address() == ERC20_POINTS_DEPOSIT.as_slice() {
                 if let Some(ev) =
                     abi::erc20_points_deposit::events::Stake::match_and_decode(log)
                 {
@@ -89,7 +89,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         sender: fmt_addr(&ev.sender),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -104,7 +104,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         sender: fmt_addr(&ev.sender),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -112,7 +112,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == ERC721_POINTS_DEPOSIT {
+            if log.address() == ERC721_POINTS_DEPOSIT.as_slice() {
                 if let Some(ev) =
                     abi::erc721_points_deposit::events::Deposit::match_and_decode(log)
                 {
@@ -122,7 +122,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         sender: fmt_addr(&ev.sender),
                         token_id: ev.token_id.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -137,7 +137,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         sender: fmt_addr(&ev.sender),
                         token_id: ev.token_id.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

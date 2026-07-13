@@ -33,10 +33,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == FUSION_LOCK {
+            if log.address() == FUSION_LOCK.as_slice() {
                 if let Some(ev) =
                     abi::fusion_lock::events::Deposit::match_and_decode(log)
                 {
@@ -47,7 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         amount: ev.amount.to_string(),
                         deposit_time: ev.deposit_time.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -62,7 +62,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         token: fmt_addr(&ev.token),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -79,7 +79,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         l2_token: fmt_addr(&ev.l2_token),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

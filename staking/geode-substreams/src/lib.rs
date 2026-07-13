@@ -34,10 +34,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == PORTAL {
+            if log.address() == PORTAL.as_slice() {
                 if let Some(ev) =
                     abi::portal::events::ProposalApproved::match_and_decode(log)
                 {
@@ -45,7 +45,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         id: id.clone(),
                         evt_id: ev.id.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -53,7 +53,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == GAVAX {
+            if log.address() == GAVAX.as_slice() {
                 if let Some(ev) =
                     abi::gavax::events::TransferSingle::match_and_decode(log)
                 {
@@ -65,7 +65,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         evt_id: ev.id.to_string(),
                         value: ev.value.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -82,7 +82,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         ids: ev.ids.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","),
                         values: ev.values.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(","),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

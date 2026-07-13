@@ -34,10 +34,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == EIGEN_CONFIG {
+            if log.address() == EIGEN_CONFIG.as_slice() {
                 if let Some(ev) =
                     abi::eigen_config::events::AddedNewSupportedAsset::match_and_decode(log)
                 {
@@ -47,7 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         receipt: fmt_addr(&ev.receipt),
                         deposit_limit: ev.deposit_limit.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -61,7 +61,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         asset: fmt_addr(&ev.asset),
                         receipt: fmt_addr(&ev.receipt),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -69,7 +69,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == EIGEN_STAKING {
+            if log.address() == EIGEN_STAKING.as_slice() {
                 if let Some(ev) =
                     abi::eigen_staking::events::AssetDeposit::match_and_decode(log)
                 {
@@ -80,7 +80,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         deposit_amount: ev.deposit_amount.to_string(),
                         referral: fmt_addr(&ev.referral),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

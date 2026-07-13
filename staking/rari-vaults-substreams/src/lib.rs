@@ -36,10 +36,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == RARI_USDC_FUND_MANAGER {
+            if log.address() == RARI_USDC_FUND_MANAGER.as_slice() {
                 if let Some(ev) =
                     abi::rari_usdc_fund_manager::events::Deposit::match_and_decode(log)
                 {
@@ -52,7 +52,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         amount_usd: ev.amount_usd.to_string(),
                         rft_minted: ev.rft_minted.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -71,7 +71,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         rft_burned: ev.rft_burned.to_string(),
                         withdrawal_fee_rate: ev.withdrawal_fee_rate.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -79,7 +79,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == RARI_YIELD_FUND_MANAGER {
+            if log.address() == RARI_YIELD_FUND_MANAGER.as_slice() {
                 if let Some(ev) =
                     abi::rari_yield_fund_manager::events::Deposit::match_and_decode(log)
                 {
@@ -92,7 +92,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         amount_usd: ev.amount_usd.to_string(),
                         rft_minted: ev.rft_minted.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -112,7 +112,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         withdrawal_fee_rate: ev.withdrawal_fee_rate.to_string(),
                         amount_transferred: ev.amount_transferred.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -120,7 +120,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == RARI_DAI_FUND_MANAGER {
+            if log.address() == RARI_DAI_FUND_MANAGER.as_slice() {
                 if let Some(ev) =
                     abi::rari_dai_fund_manager::events::Deposit::match_and_decode(log)
                 {
@@ -133,7 +133,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         amount_usd: ev.amount_usd.to_string(),
                         rft_minted: ev.rft_minted.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -152,7 +152,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         rft_burned: ev.rft_burned.to_string(),
                         withdrawal_fee_rate: ev.withdrawal_fee_rate.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -160,7 +160,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == RARI_ETHER_FUND_MANAGER {
+            if log.address() == RARI_ETHER_FUND_MANAGER.as_slice() {
                 if let Some(ev) =
                     abi::rari_ether_fund_manager::events::Deposit::match_and_decode(log)
                 {
@@ -171,7 +171,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         amount: ev.amount.to_string(),
                         rept_minted: ev.rept_minted.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -187,7 +187,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         amount: ev.amount.to_string(),
                         rept_burned: ev.rept_burned.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

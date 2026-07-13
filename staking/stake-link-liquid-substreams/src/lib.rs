@@ -34,10 +34,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == STLINK {
+            if log.address() == STLINK.as_slice() {
                 if let Some(ev) =
                     abi::stlink::events::Transfer::match_and_decode(log)
                 {
@@ -47,7 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         to: fmt_addr(&ev.to),
                         value: ev.value.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -63,7 +63,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         rewards_amount: ev.rewards_amount.to_string(),
                         total_fees: ev.total_fees.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -71,7 +71,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == PRIORITY_POOL {
+            if log.address() == PRIORITY_POOL.as_slice() {
                 if let Some(ev) =
                     abi::priority_pool::events::Deposit::match_and_decode(log)
                 {
@@ -81,7 +81,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         pool_amount: ev.pool_amount.to_string(),
                         queue_amount: ev.queue_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -95,7 +95,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         unused_tokens_amount: ev.unused_tokens_amount.to_string(),
                         queued_tokens_amount: ev.queued_tokens_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -109,7 +109,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         account: fmt_addr(&ev.account),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -123,7 +123,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         account: fmt_addr(&ev.account),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

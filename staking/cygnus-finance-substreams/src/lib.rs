@@ -33,10 +33,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == CGUSD {
+            if log.address() == CGUSD.as_slice() {
                 if let Some(ev) =
                     abi::cgusd::events::Invested::match_and_decode(log)
                 {
@@ -46,7 +46,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         post_buffered_assets: ev.post_buffered_assets.to_string(),
                         post_invested_assets: ev.post_invested_assets.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -62,7 +62,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         post_rebase_token_amount: ev.post_rebase_token_amount.to_string(),
                         shares_amount: ev.shares_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -77,7 +77,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         amount: ev.amount.to_string(),
                         referral: fmt_addr(&ev.referral),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

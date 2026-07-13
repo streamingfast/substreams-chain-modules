@@ -34,10 +34,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == STAKING {
+            if log.address() == STAKING.as_slice() {
                 if let Some(ev) =
                     abi::staking::events::Staked::match_and_decode(log)
                 {
@@ -47,7 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         eth_amount: ev.eth_amount.to_string(),
                         m_eth_amount: ev.m_eth_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -63,7 +63,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         eth_amount: ev.eth_amount.to_string(),
                         m_eth_locked: ev.m_eth_locked.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -77,7 +77,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         evt_id: ev.id.to_string(),
                         staker: fmt_addr(&ev.staker),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -85,7 +85,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == RETURNS_AGGREGATOR {
+            if log.address() == RETURNS_AGGREGATOR.as_slice() {
                 if let Some(ev) =
                     abi::returns_aggregator::events::FeesCollected::match_and_decode(log)
                 {
@@ -93,7 +93,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         id: id.clone(),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

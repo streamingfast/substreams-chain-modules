@@ -34,10 +34,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == SAVAX {
+            if log.address() == SAVAX.as_slice() {
                 if let Some(ev) =
                     abi::savax::events::Submitted::match_and_decode(log)
                 {
@@ -47,7 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         avax_amount: ev.avax_amount.to_string(),
                         share_amount: ev.share_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -63,7 +63,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         share_amount: ev.share_amount.to_string(),
                         avax_amount: ev.avax_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -77,7 +77,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         user_reward_amount: ev.user_reward_amount.to_string(),
                         protocol_reward_amount: ev.protocol_reward_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -85,7 +85,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address == SAVAX_OLD_IMPLEMENTATION {
+            if log.address() == SAVAX_OLD_IMPLEMENTATION.as_slice() {
                 if let Some(ev) =
                     abi::savax_old_implementation::events::AccrueRewards::match_and_decode(log)
                 {
@@ -93,7 +93,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         id: id.clone(),
                         value: ev.value.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

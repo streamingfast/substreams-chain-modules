@@ -33,10 +33,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == BCT {
+            if log.address() == BCT.as_slice() {
                 if let Some(ev) =
                     abi::bct::events::Transfer::match_and_decode(log)
                 {
@@ -46,7 +46,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         to: fmt_addr(&ev.to),
                         value: ev.value.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -60,7 +60,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         redeemer: fmt_addr(&ev.redeemer),
                         fees: ev.fees.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });

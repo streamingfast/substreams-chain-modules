@@ -33,10 +33,10 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            let id = format!("{}-{}", tx_hash, log.index);
+        for log in trx.receipt().logs() {
+            let id = format!("{}-{}", tx_hash, log.index());
 
-            if log.address == ORA_STAKE_ROUTER {
+            if log.address() == ORA_STAKE_ROUTER.as_slice() {
                 if let Some(ev) =
                     abi::ora_stake_router::events::Stake::match_and_decode(log)
                 {
@@ -47,7 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         pool: fmt_addr(&ev.pool),
                         vault_id: ev.vault_id.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -64,7 +64,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         vault_id: ev.vault_id.to_string(),
                         request_id: ev.request_id.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -81,7 +81,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         vault_id: ev.vault_id.to_string(),
                         last_request_id: ev.last_request_id.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
+                        log_index: log.index() as u64,
                         block_num: block.number,
                         timestamp,
                     });
