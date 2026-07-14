@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: cygnus-finance-substreams
   version: v0.1.0
-  description: Indexes cygnus-finance on base. TODO refine.
+  description: Indexes Cygnus Finance cgUSD on Base. Tracks submissions, investments, and share burns for the yield-bearing stablecoin.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/cygnus-finance-substreams
 
 imports:

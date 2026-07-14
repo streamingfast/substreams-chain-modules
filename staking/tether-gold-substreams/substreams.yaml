@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: tether-gold-substreams
   version: v0.1.0
-  description: Indexes tether-gold on mainnet. TODO refine.
+  description: Indexes Tether Gold (XAUt) on Ethereum. Tracks transfers, mints, and redemptions for the gold-backed token.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/tether-gold-substreams
 
 imports:

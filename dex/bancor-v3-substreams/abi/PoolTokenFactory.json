@@ -1,0 +1,21 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "PoolTokenCreated",
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "poolToken",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ]
+  }
+]

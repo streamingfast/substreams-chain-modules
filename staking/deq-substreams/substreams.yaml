@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: deq-substreams
   version: v0.1.0
-  description: Indexes deq on mainnet. TODO refine.
+  description: Indexes staked Avail (stAVAIL) on Ethereum. Tracks staked-token transfers.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/deq-substreams
 
 imports:

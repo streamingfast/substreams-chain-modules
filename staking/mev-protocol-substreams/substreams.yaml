@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: mev-protocol-substreams
   version: v0.1.0
-  description: Indexes mev-protocol on mainnet. TODO refine.
+  description: Indexes MEV Protocol mevETH on Ethereum. Tracks deposits, withdrawals, and rewards.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/mev-protocol-substreams
 
 imports:

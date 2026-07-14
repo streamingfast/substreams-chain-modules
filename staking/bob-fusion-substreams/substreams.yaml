@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: bob-fusion-substreams
   version: v0.1.0
-  description: Indexes bob-fusion on mainnet. TODO refine.
+  description: Indexes BOB Fusion lock on Ethereum. Tracks deposits and L1/L2 withdrawals in the Fusion staking campaign.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/bob-fusion-substreams
 
 imports:

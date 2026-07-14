@@ -1,0 +1,219 @@
+syntax = "proto3";
+
+package inverse_finance.types.v1;
+
+message Events {
+  repeated FactoryMarketListed factory_market_listeds = 1;
+  repeated FactoryActionPaused factory_action_pauseds = 2;
+  repeated FactoryDistributedBorrowerComp factory_distributed_borrower_comps = 3;
+  repeated FactoryDistributedSupplierComp factory_distributed_supplier_comps = 4;
+  repeated FactoryNewCollateralFactor factory_new_collateral_factors = 5;
+  repeated FactoryNewCloseFactor factory_new_close_factors = 6;
+  repeated FactoryNewLiquidationIncentive factory_new_liquidation_incentives = 7;
+  repeated CTokenMint c_token_mints = 8;
+  repeated CTokenRedeem c_token_redeems = 9;
+  repeated CTokenBorrow c_token_borrows = 10;
+  repeated CTokenRepayBorrow c_token_repay_borrows = 11;
+  repeated CTokenLiquidateBorrow c_token_liquidate_borrows = 12;
+  repeated CTokenAccrueInterest c_token_accrue_interests = 13;
+  repeated InvOwnerChanged inv_owner_changeds = 14;
+  repeated DolaTransfer dola_transfers = 15;
+  repeated StablizerSell stablizer_sells = 16;
+  repeated StablizerBuy stablizer_buys = 17;
+}
+
+message FactoryMarketListed {
+  string id = 1;
+  string c_token = 2;
+  string tx_hash = 3;
+  uint64 log_index = 4;
+  uint64 block_num = 5;
+  uint64 timestamp = 6;
+}
+
+message FactoryActionPaused {
+  string id = 1;
+  string c_token = 2;
+  string action = 3;
+  string pause_state = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message FactoryDistributedBorrowerComp {
+  string id = 1;
+  string c_token = 2;
+  string borrower = 3;
+  string comp_delta = 4;
+  string comp_borrow_index = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message FactoryDistributedSupplierComp {
+  string id = 1;
+  string c_token = 2;
+  string supplier = 3;
+  string comp_delta = 4;
+  string comp_supply_index = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message FactoryNewCollateralFactor {
+  string id = 1;
+  string c_token = 2;
+  string old_collateral_factor_mantissa = 3;
+  string new_collateral_factor_mantissa = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message FactoryNewCloseFactor {
+  string id = 1;
+  string old_close_factor_mantissa = 2;
+  string new_close_factor_mantissa = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message FactoryNewLiquidationIncentive {
+  string id = 1;
+  string old_liquidation_incentive_mantissa = 2;
+  string new_liquidation_incentive_mantissa = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message CTokenMint {
+  string id = 1;
+  string pool = 2;
+  string minter = 3;
+  string mint_amount = 4;
+  string mint_tokens = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message CTokenRedeem {
+  string id = 1;
+  string pool = 2;
+  string redeemer = 3;
+  string redeem_amount = 4;
+  string redeem_tokens = 5;
+  string tx_hash = 6;
+  uint64 log_index = 7;
+  uint64 block_num = 8;
+  uint64 timestamp = 9;
+}
+
+message CTokenBorrow {
+  string id = 1;
+  string pool = 2;
+  string borrower = 3;
+  string borrow_amount = 4;
+  string account_borrows = 5;
+  string total_borrows = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message CTokenRepayBorrow {
+  string id = 1;
+  string pool = 2;
+  string payer = 3;
+  string borrower = 4;
+  string repay_amount = 5;
+  string account_borrows = 6;
+  string total_borrows = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message CTokenLiquidateBorrow {
+  string id = 1;
+  string pool = 2;
+  string liquidator = 3;
+  string borrower = 4;
+  string repay_amount = 5;
+  string c_token_collateral = 6;
+  string seize_tokens = 7;
+  string tx_hash = 8;
+  uint64 log_index = 9;
+  uint64 block_num = 10;
+  uint64 timestamp = 11;
+}
+
+message CTokenAccrueInterest {
+  string id = 1;
+  string pool = 2;
+  string cash_prior = 3;
+  string interest_accumulated = 4;
+  string borrow_index = 5;
+  string total_borrows = 6;
+  string tx_hash = 7;
+  uint64 log_index = 8;
+  uint64 block_num = 9;
+  uint64 timestamp = 10;
+}
+
+message InvOwnerChanged {
+  string id = 1;
+  string owner = 2;
+  string new_owner = 3;
+  string tx_hash = 4;
+  uint64 log_index = 5;
+  uint64 block_num = 6;
+  uint64 timestamp = 7;
+}
+
+message DolaTransfer {
+  string id = 1;
+  string from = 2;
+  string to = 3;
+  string value = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message StablizerSell {
+  string id = 1;
+  string user = 2;
+  string sold = 3;
+  string received = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}
+
+message StablizerBuy {
+  string id = 1;
+  string user = 2;
+  string purchased = 3;
+  string spent = 4;
+  string tx_hash = 5;
+  uint64 log_index = 6;
+  uint64 block_num = 7;
+  uint64 timestamp = 8;
+}

@@ -1,0 +1,52 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "Sell",
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "sold",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "received",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "Buy",
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "purchased",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "spent",
+        "type": "uint256"
+      }
+    ]
+  }
+]

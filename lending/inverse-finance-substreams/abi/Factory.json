@@ -1,0 +1,165 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "MarketListed",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "cToken",
+        "type": "address"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "ActionPaused",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "cToken",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "action",
+        "type": "string"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "pauseState",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "DistributedBorrowerComp",
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "cToken",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "compDelta",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "compBorrowIndex",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "DistributedSupplierComp",
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "cToken",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "supplier",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "compDelta",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "compSupplyIndex",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "NewCollateralFactor",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "cToken",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldCollateralFactorMantissa",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newCollateralFactorMantissa",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "NewCloseFactor",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldCloseFactorMantissa",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newCloseFactorMantissa",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "NewLiquidationIncentive",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldLiquidationIncentiveMantissa",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newLiquidationIncentiveMantissa",
+        "type": "uint256"
+      }
+    ]
+  }
+]

@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: inception-substreams
   version: v0.1.0
-  description: Indexes inception on mainnet. TODO refine.
+  description: Indexes InceptionLRT staked ETH (inETH) on Ethereum. Tracks inETH transfers.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/inception-substreams
 
 imports:

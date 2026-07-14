@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: stcelo-substreams
   version: v0.1.0
-  description: Indexes stcelo on celo. TODO refine.
+  description: Indexes Staked CELO (stCELO) on Celo. Tracks vote scheduling and CELO withdrawal scheduling and start events.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/stcelo-substreams
 
 imports:

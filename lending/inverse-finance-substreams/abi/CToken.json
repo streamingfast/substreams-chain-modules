@@ -1,0 +1,188 @@
+[
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "Mint",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "minter",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "mintAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "mintTokens",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "Redeem",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "redeemer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "redeemAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "redeemTokens",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "Borrow",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "borrowAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "accountBorrows",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalBorrows",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "RepayBorrow",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "payer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "repayAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "accountBorrows",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalBorrows",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "LiquidateBorrow",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "liquidator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "borrower",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "repayAmount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "cTokenCollateral",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "seizeTokens",
+        "type": "uint256"
+      }
+    ]
+  },
+  {
+    "anonymous": false,
+    "type": "event",
+    "name": "AccrueInterest",
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "cashPrior",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "interestAccumulated",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "borrowIndex",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalBorrows",
+        "type": "uint256"
+      }
+    ]
+  }
+]

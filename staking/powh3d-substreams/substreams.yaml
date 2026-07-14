@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: powh3d-substreams
   version: v0.1.0
-  description: Indexes powh3d on mainnet. TODO refine.
+  description: Indexes PoWH3D (Hourglass) on Ethereum. Tracks token purchases, sells, reinvestments, withdrawals, and transfers.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/powh3d-substreams
 
 imports:

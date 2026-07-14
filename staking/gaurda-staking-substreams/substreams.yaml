@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: gaurda-staking-substreams
   version: v0.1.0
-  description: Indexes gaurda-staking on mainnet. TODO refine.
+  description: Indexes Guarda staked ETH (gETH) on Ethereum. Tracks staked-token transfers.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/gaurda-staking-substreams
 
 imports:

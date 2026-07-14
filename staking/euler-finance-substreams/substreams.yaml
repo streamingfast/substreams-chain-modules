@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: euler-finance-substreams
   version: v0.1.0
-  description: Indexes euler-finance on ethereum. TODO refine.
+  description: Indexes Euler Finance lending on Ethereum. Tracks deposits, borrows, repays, withdrawals, liquidations, market activations, and EUL staking.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/euler-finance-substreams
 
 imports:

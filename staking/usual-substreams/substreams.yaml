@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: usual-substreams
   version: v0.1.0
-  description: Indexes usual on mainnet. TODO refine.
+  description: Indexes Usual USYC on Ethereum. Tracks transfers and fee processing for the yield-bearing stablecoin.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/usual-substreams
 
 imports:

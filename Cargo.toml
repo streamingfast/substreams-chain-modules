@@ -1,6 +1,9 @@
 [workspace]
 members = [
+    "dex/bancor-v3-substreams",
     "dex/velodrome-substreams",
+    "lending/inverse-finance-substreams",
+    "staking/tokemak-substreams",
     "lending/compound-v3-substreams",
     "lending/liquity-substreams",
     "lending/maple-finance-v2-substreams",
@@ -8,6 +11,7 @@ members = [
     "lending/yearn-v2-substreams",
     "nft/looksrare-substreams",
     "nft/seaport-substreams",
+    "staking/suzaku-substreams",
     "staking/eigenlayer-substreams",
     "staking/etherfi-substreams",
     "staking/frax-ether-staking-substreams",

@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: eigenpie-substreams
   version: v0.1.0
-  description: Indexes eigenpie on mainnet. TODO refine.
+  description: Indexes Eigenpie liquid restaking (LRT) on Ethereum. Tracks supported-asset configuration and asset deposits into the restaking contract.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/eigenpie-substreams
 
 imports:

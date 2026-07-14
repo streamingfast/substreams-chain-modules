@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: superseed-substreams
   version: v0.1.0
-  description: Indexes superseed on mainnet. TODO refine.
+  description: Indexes the Superseed token sale on Ethereum. Tracks token purchases in the sale deposit contract.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/superseed-substreams
 
 imports:

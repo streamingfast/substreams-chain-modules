@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: slisbnb-substreams
   version: v0.1.0
-  description: Indexes slisbnb on bsc. TODO refine.
+  description: Indexes Lista DAO slisBNB liquid staking on BNB Chain. Tracks deposits, withdrawal requests, claims, and reward compounding.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/slisbnb-substreams
 
 imports:

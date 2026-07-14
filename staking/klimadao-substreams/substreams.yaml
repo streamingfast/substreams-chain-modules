@@ -3,7 +3,7 @@ specVersion: v0.1.0
 package:
   name: klimadao-substreams
   version: v0.1.0
-  description: Indexes klimadao on matic. TODO refine.
+  description: Indexes KlimaDAO Base Carbon Tonne (BCT) on Polygon. Tracks carbon-token transfers and redemption fees.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/klimadao-substreams
 
 imports:
