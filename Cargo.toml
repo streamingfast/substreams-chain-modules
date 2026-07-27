@@ -67,6 +67,7 @@ members = [
     "staking/gogopool-substreams",
     "staking/rari-vaults-substreams",
     "staking/euler-finance-substreams",
+    "payment/superfluid-substreams",
 ]
 resolver = "2"
 

@@ -1,0 +1,1207 @@
+syntax = "proto3";
+
+package superfluid.v1;
+
+import "sf/substreams/sink/sql/schema/v1/schema.proto";
+
+// Superfluid protocol events (Base mainnet) for ClickHouse from-proto.
+
+message Events {
+  repeated FlowUpdatedEvent flow_updated_events = 1;
+  repeated FlowUpdatedExtensionEvent flow_updated_extension_events = 2;
+  repeated FlowOperatorUpdatedEvent flow_operator_updated_events = 3;
+  repeated IndexCreatedEvent index_created_events = 4;
+  repeated IndexDistributionClaimedEvent index_distribution_claimed_events = 5;
+  repeated IndexUpdatedEvent index_updated_events = 6;
+  repeated IndexSubscribedEvent index_subscribed_events = 7;
+  repeated IndexUnitsUpdatedEvent index_units_updated_events = 8;
+  repeated IndexUnsubscribedEvent index_unsubscribed_events = 9;
+  repeated SubscriptionApprovedEvent subscription_approved_events = 10;
+  repeated SubscriptionDistributionClaimedEvent subscription_distribution_claimed_events = 11;
+  repeated SubscriptionRevokedEvent subscription_revoked_events = 12;
+  repeated SubscriptionUnitsUpdatedEvent subscription_units_updated_events = 13;
+  repeated BufferAdjustedEvent buffer_adjusted_events = 14;
+  repeated FlowDistributionUpdatedEvent flow_distribution_updated_events = 15;
+  repeated InstantDistributionUpdatedEvent instant_distribution_updated_events = 16;
+  repeated PoolConnectionUpdatedEvent pool_connection_updated_events = 17;
+  repeated PoolCreatedEvent pool_created_events = 18;
+  repeated SuperTokenCreatedEvent super_token_created_events = 19;
+  repeated CustomSuperTokenCreatedEvent custom_super_token_created_events = 20;
+  repeated SuperTokenLogicCreatedEvent super_token_logic_created_events = 21;
+  repeated AgreementLiquidatedByEvent agreement_liquidated_by_events = 22;
+  repeated AgreementLiquidatedV2Event agreement_liquidated_v2_events = 23;
+  repeated BurnedEvent burned_events = 24;
+  repeated MintedEvent minted_events = 25;
+  repeated SentEvent sent_events = 26;
+  repeated TokenUpgradedEvent token_upgraded_events = 27;
+  repeated TokenDowngradedEvent token_downgraded_events = 28;
+  repeated TransferEvent transfer_events = 29;
+  repeated ApprovalEvent approval_events = 30;
+  repeated GovernanceReplacedEvent governance_replaced_events = 31;
+  repeated AgreementClassRegisteredEvent agreement_class_registered_events = 32;
+  repeated AgreementClassUpdatedEvent agreement_class_updated_events = 33;
+  repeated SuperTokenFactoryUpdatedEvent super_token_factory_updated_events = 34;
+  repeated SuperTokenLogicUpdatedEvent super_token_logic_updated_events = 35;
+  repeated AppRegisteredEvent app_registered_events = 36;
+  repeated JailEvent jail_events = 37;
+  repeated RoleAdminChangedEvent role_admin_changed_events = 38;
+  repeated RoleGrantedEvent role_granted_events = 39;
+  repeated RoleRevokedEvent role_revoked_events = 40;
+  repeated SetEvent set_events = 41;
+  repeated ConfigChangedEvent config_changed_events = 42;
+  repeated RewardAddressChangedEvent reward_address_changed_events = 43;
+  repeated CFAv1LiquidationPeriodChangedEvent cfav1_liquidation_period_changed_events = 44;
+  repeated PPPConfigurationChangedEvent pppconfiguration_changed_events = 45;
+  repeated SuperTokenMinimumDepositChangedEvent super_token_minimum_deposit_changed_events = 46;
+  repeated TrustedForwarderChangedEvent trusted_forwarder_changed_events = 47;
+  repeated NewPICEvent new_pic_events = 48;
+  repeated ExitRateChangedEvent exit_rate_changed_events = 49;
+  repeated BondIncreasedEvent bond_increased_events = 50;
+  repeated MemberUnitsUpdatedEvent member_units_updated_events = 51;
+  repeated DistributionClaimedEvent distribution_claimed_events = 52;
+}
+
+message FlowUpdatedEvent {
+  option (schema.table) = {
+    name: "flow_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string sender = 9;
+  string receiver = 10;
+  string flow_rate = 11;
+  string total_sender_flow_rate = 12;
+  string total_receiver_flow_rate = 13;
+  string user_data = 14;
+}
+
+message FlowUpdatedExtensionEvent {
+  option (schema.table) = {
+    name: "flow_updated_extension_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string flow_operator = 8;
+  string deposit = 9;
+}
+
+message FlowOperatorUpdatedEvent {
+  option (schema.table) = {
+    name: "flow_operator_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string sender = 9;
+  string flow_operator = 10;
+  string permissions = 11;
+  string flow_rate_allowance = 12;
+}
+
+message IndexCreatedEvent {
+  option (schema.table) = {
+    name: "index_created_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string publisher = 9;
+  string index_id = 10;
+  string user_data = 11;
+}
+
+message IndexDistributionClaimedEvent {
+  option (schema.table) = {
+    name: "index_distribution_claimed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string publisher = 9;
+  string index_id = 10;
+  string subscriber = 11;
+  string amount = 12;
+}
+
+message IndexUpdatedEvent {
+  option (schema.table) = {
+    name: "index_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string publisher = 9;
+  string index_id = 10;
+  string old_index_value = 11;
+  string new_index_value = 12;
+  string total_units_pending = 13;
+  string total_units_approved = 14;
+  string user_data = 15;
+}
+
+message IndexSubscribedEvent {
+  option (schema.table) = {
+    name: "index_subscribed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string publisher = 9;
+  string index_id = 10;
+  string subscriber = 11;
+  string user_data = 12;
+}
+
+message IndexUnitsUpdatedEvent {
+  option (schema.table) = {
+    name: "index_units_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string publisher = 9;
+  string index_id = 10;
+  string subscriber = 11;
+  string units = 12;
+  string user_data = 13;
+}
+
+message IndexUnsubscribedEvent {
+  option (schema.table) = {
+    name: "index_unsubscribed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string publisher = 9;
+  string index_id = 10;
+  string subscriber = 11;
+  string user_data = 12;
+}
+
+message SubscriptionApprovedEvent {
+  option (schema.table) = {
+    name: "subscription_approved_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string subscriber = 9;
+  string publisher = 10;
+  string index_id = 11;
+  string user_data = 12;
+}
+
+message SubscriptionDistributionClaimedEvent {
+  option (schema.table) = {
+    name: "subscription_distribution_claimed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string subscriber = 9;
+  string publisher = 10;
+  string index_id = 11;
+  string amount = 12;
+}
+
+message SubscriptionRevokedEvent {
+  option (schema.table) = {
+    name: "subscription_revoked_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string subscriber = 9;
+  string publisher = 10;
+  string index_id = 11;
+  string user_data = 12;
+}
+
+message SubscriptionUnitsUpdatedEvent {
+  option (schema.table) = {
+    name: "subscription_units_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string subscriber = 9;
+  string publisher = 10;
+  string index_id = 11;
+  string units = 12;
+  string user_data = 13;
+}
+
+message BufferAdjustedEvent {
+  option (schema.table) = {
+    name: "buffer_adjusted_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string pool = 9;
+  string from = 10;
+  string buffer_delta = 11;
+  string new_buffer_amount = 12;
+  string total_buffer_amount = 13;
+}
+
+message FlowDistributionUpdatedEvent {
+  option (schema.table) = {
+    name: "flow_distribution_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string pool = 9;
+  string distributor = 10;
+  string operator = 11;
+  string old_flow_rate = 12;
+  string new_distributor_to_pool_flow_rate = 13;
+  string new_total_distribution_flow_rate = 14;
+  string adjustment_flow_recipient = 15;
+  string adjustment_flow_rate = 16;
+  string user_data = 17;
+}
+
+message InstantDistributionUpdatedEvent {
+  option (schema.table) = {
+    name: "instant_distribution_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string pool = 9;
+  string distributor = 10;
+  string operator = 11;
+  string requested_amount = 12;
+  string actual_amount = 13;
+  string user_data = 14;
+}
+
+message PoolConnectionUpdatedEvent {
+  option (schema.table) = {
+    name: "pool_connection_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string pool = 9;
+  string account = 10;
+  bool connected = 11;
+  string user_data = 12;
+}
+
+message PoolCreatedEvent {
+  option (schema.table) = {
+    name: "pool_created_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string admin = 9;
+  string pool = 10;
+}
+
+message SuperTokenCreatedEvent {
+  option (schema.table) = {
+    name: "super_token_created_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+}
+
+message CustomSuperTokenCreatedEvent {
+  option (schema.table) = {
+    name: "custom_super_token_created_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+}
+
+message SuperTokenLogicCreatedEvent {
+  option (schema.table) = {
+    name: "super_token_logic_created_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token_logic = 8;
+}
+
+message AgreementLiquidatedByEvent {
+  option (schema.table) = {
+    name: "agreement_liquidated_by_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string liquidator_account = 8;
+  string agreement_class = 9;
+  string id_2 = 10;
+  string penalty_account = 11;
+  string bond_account = 12;
+  string reward_amount = 13;
+  string bailout_amount = 14;
+}
+
+message AgreementLiquidatedV2Event {
+  option (schema.table) = {
+    name: "agreement_liquidated_v2_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string agreement_class = 8;
+  string id_2 = 9;
+  string liquidator_account = 10;
+  string target_account = 11;
+  string reward_amount_receiver = 12;
+  string reward_amount = 13;
+  string target_account_balance_delta = 14;
+  string liquidation_type_data = 15;
+}
+
+message BurnedEvent {
+  option (schema.table) = {
+    name: "burned_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string operator = 8;
+  string from = 9;
+  string amount = 10;
+  string data = 11;
+  string operator_data = 12;
+}
+
+message MintedEvent {
+  option (schema.table) = {
+    name: "minted_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string operator = 8;
+  string to = 9;
+  string amount = 10;
+  string data = 11;
+  string operator_data = 12;
+}
+
+message SentEvent {
+  option (schema.table) = {
+    name: "sent_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string operator = 8;
+  string from = 9;
+  string to = 10;
+  string amount = 11;
+  string data = 12;
+  string operator_data = 13;
+}
+
+message TokenUpgradedEvent {
+  option (schema.table) = {
+    name: "token_upgraded_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string account = 8;
+  string amount = 9;
+}
+
+message TokenDowngradedEvent {
+  option (schema.table) = {
+    name: "token_downgraded_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string account = 8;
+  string amount = 9;
+}
+
+message TransferEvent {
+  option (schema.table) = {
+    name: "transfer_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string from = 8;
+  string to = 9;
+  string value = 10;
+}
+
+message ApprovalEvent {
+  option (schema.table) = {
+    name: "approval_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string owner = 8;
+  string spender = 9;
+  string value = 10;
+}
+
+message GovernanceReplacedEvent {
+  option (schema.table) = {
+    name: "governance_replaced_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string old_gov = 8;
+  string new_gov = 9;
+}
+
+message AgreementClassRegisteredEvent {
+  option (schema.table) = {
+    name: "agreement_class_registered_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string agreement_type = 8;
+  string code = 9;
+}
+
+message AgreementClassUpdatedEvent {
+  option (schema.table) = {
+    name: "agreement_class_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string agreement_type = 8;
+  string code = 9;
+}
+
+message SuperTokenFactoryUpdatedEvent {
+  option (schema.table) = {
+    name: "super_token_factory_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string new_factory = 8;
+}
+
+message SuperTokenLogicUpdatedEvent {
+  option (schema.table) = {
+    name: "super_token_logic_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string code = 9;
+}
+
+message AppRegisteredEvent {
+  option (schema.table) = {
+    name: "app_registered_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string app = 8;
+}
+
+message JailEvent {
+  option (schema.table) = {
+    name: "jail_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string app = 8;
+  string reason = 9;
+}
+
+message RoleAdminChangedEvent {
+  option (schema.table) = {
+    name: "role_admin_changed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string role = 8;
+  string previous_admin_role = 9;
+  string new_admin_role = 10;
+}
+
+message RoleGrantedEvent {
+  option (schema.table) = {
+    name: "role_granted_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string role = 8;
+  string account = 9;
+  string sender = 10;
+}
+
+message RoleRevokedEvent {
+  option (schema.table) = {
+    name: "role_revoked_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string role = 8;
+  string account = 9;
+  string sender = 10;
+}
+
+message SetEvent {
+  option (schema.table) = {
+    name: "set_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string name = 8;
+  string target = 9;
+}
+
+message ConfigChangedEvent {
+  option (schema.table) = {
+    name: "config_changed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string host = 8;
+  string super_token = 9;
+  string key = 10;
+  bool is_key_set = 11;
+  string value = 12;
+}
+
+message RewardAddressChangedEvent {
+  option (schema.table) = {
+    name: "reward_address_changed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string host = 8;
+  string super_token = 9;
+  bool is_key_set = 10;
+  string reward_address = 11;
+}
+
+message CFAv1LiquidationPeriodChangedEvent {
+  option (schema.table) = {
+    name: "cfav1_liquidation_period_changed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string host = 8;
+  string super_token = 9;
+  bool is_key_set = 10;
+  string liquidation_period = 11;
+}
+
+message PPPConfigurationChangedEvent {
+  option (schema.table) = {
+    name: "pppconfiguration_changed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string host = 8;
+  string super_token = 9;
+  bool is_key_set = 10;
+  string liquidation_period = 11;
+  string patrician_period = 12;
+}
+
+message SuperTokenMinimumDepositChangedEvent {
+  option (schema.table) = {
+    name: "super_token_minimum_deposit_changed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string host = 8;
+  string super_token = 9;
+  bool is_key_set = 10;
+  string minimum_deposit = 11;
+}
+
+message TrustedForwarderChangedEvent {
+  option (schema.table) = {
+    name: "trusted_forwarder_changed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string host = 8;
+  string super_token = 9;
+  bool is_key_set = 10;
+  string forwarder = 11;
+  bool enabled = 12;
+}
+
+message NewPICEvent {
+  option (schema.table) = {
+    name: "new_pic_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string pic = 9;
+  string bond = 10;
+  string exit_rate = 11;
+}
+
+message ExitRateChangedEvent {
+  option (schema.table) = {
+    name: "exit_rate_changed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string exit_rate = 9;
+}
+
+message BondIncreasedEvent {
+  option (schema.table) = {
+    name: "bond_increased_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string additional_bond = 9;
+}
+
+message MemberUnitsUpdatedEvent {
+  option (schema.table) = {
+    name: "member_units_updated_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string member = 9;
+  string old_units = 10;
+  string new_units = 11;
+}
+
+message DistributionClaimedEvent {
+  option (schema.table) = {
+    name: "distribution_claimed_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token = 8;
+  string member = 9;
+  string claimed_amount = 10;
+  string total_claimed = 11;
+}

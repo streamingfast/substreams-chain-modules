@@ -1,0 +1,43 @@
+specVersion: v0.1.0
+package:
+  name: superfluid-substreams
+  version: v0.2.3
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/payment/superfluid-substreams
+  description: >
+    Superfluid Protocol V1 on Base mainnet — event decode only;
+    dynamic address store for SuperToken/Pool/gov; HOL and aggregates via ClickHouse views.
+
+protobuf:
+  files:
+    - events.proto
+    - sf/substreams/sink/sql/schema/v1/schema.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/superfluid_substreams.wasm
+
+network: base
+
+modules:
+  # Dynamic discovery only (design P2). No HOL / aggregate state in stores.
+  - name: store_dynamic_addresses
+    kind: store
+    initialBlock: 1000000
+    updatePolicy: set_if_not_exists
+    valueType: int64
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+
+  - name: map_events
+    kind: map
+    initialBlock: 1000000
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+      - store: store_dynamic_addresses
+    output:
+      type: proto:superfluid.v1.Events

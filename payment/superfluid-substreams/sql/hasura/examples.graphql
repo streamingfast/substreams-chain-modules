@@ -1,0 +1,36 @@
+# Example queries against Hasura over ClickHouse (read-only).
+# Endpoint: http://localhost:8080/v1/graphql
+# Header:  x-hasura-admin-secret: SecureMe!
+#
+# Root field names = {clickhouse_database}_{view} (see tracklist.sql).
+
+query OpenStreams {
+  superfluid_api_streams(limit: 20, where: { is_open: { _eq: 1 } }) {
+    stream_id
+    sender
+    receiver
+    token
+    current_flow_rate
+    deposit
+    streamed_until_updated_at
+  }
+}
+
+query Pools {
+  superfluid_api_pools(limit: 10) {
+    pool
+    token
+    admin
+    flow_rate
+    total_units
+    total_buffer
+  }
+}
+
+query Tokens {
+  superfluid_api_tokens(limit: 20) {
+    token
+    created_at_block
+    source
+  }
+}
