@@ -1,0 +1,33 @@
+specVersion: v0.1.0
+package:
+  name: uniswap-v4-substreams
+  version: v0.1.0
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/dex/uniswap-v4-substreams
+  description: >
+    Uniswap v4 on Base — event decode only (PoolManager + PositionManager);
+    HOL via ClickHouse views (sg2ss). No business stores.
+
+protobuf:
+  files:
+    - events.proto
+    - sf/substreams/sink/sql/schema/v1/schema.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/uniswap_v4_substreams.wasm
+
+network: base
+
+modules:
+  - name: map_events
+    kind: map
+    initialBlock: 25350988
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:uniswap.v4.Events

@@ -1,0 +1,44 @@
+# Example queries against Hasura over ClickHouse (read-only).
+# Endpoint: http://localhost:8080/v1/graphql
+# Header:  x-hasura-admin-secret: SecureMe!
+#
+# Root field names = {clickhouse_database}_{view}
+
+query OpenPools {
+  uniswap_v4_api_pools(limit: 10) {
+    pool_id
+    token0
+    token1
+    fee
+    tick
+    liquidity
+    swap_count
+  }
+}
+
+query RecentSwaps {
+  uniswap_v4_api_swaps(limit: 20, order_by: { block_number: desc }) {
+    id
+    pool_id
+    sender
+    amount0
+    amount1
+    tick
+    block_number
+  }
+}
+
+query Positions {
+  uniswap_v4_api_positions(limit: 20) {
+    token_id
+    owner
+    updated_at
+  }
+}
+
+query Tokens {
+  uniswap_v4_api_tokens(limit: 50) {
+    token
+    first_seen_block
+  }
+}

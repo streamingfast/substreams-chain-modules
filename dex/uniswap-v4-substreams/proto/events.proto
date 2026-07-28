@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package uniswap.v4;
+
+import "sf/substreams/sink/sql/schema/v1/schema.proto";
+
+// Uniswap v4 events (Base) for ClickHouse from-proto.
+
+message Events {
+  repeated InitializeEvent initialize_events = 1;
+  repeated SwapEvent swap_events = 2;
+  repeated ModifyLiquidityEvent modify_liquidity_events = 3;
+  repeated PositionTransferEvent position_transfer_events = 4;
+  repeated PositionSubscriptionEvent position_subscription_events = 5;
+  repeated PositionUnsubscriptionEvent position_unsubscription_events = 6;
+}
+
+message InitializeEvent {
+  option (schema.table) = {
+    name: "initialize_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string pool_id = 8;
+  string currency0 = 9;
+  string currency1 = 10;
+  string fee = 11;
+  string tick_spacing = 12;
+  string hooks = 13;
+  string sqrt_price_x96 = 14;
+  string tick = 15;
+}
+
+message SwapEvent {
+  option (schema.table) = {
+    name: "swap_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string pool_id = 8;
+  string sender = 9;
+  string amount0 = 10;
+  string amount1 = 11;
+  string sqrt_price_x96 = 12;
+  string liquidity = 13;
+  string tick = 14;
+  string fee = 15;
+}
+
+message ModifyLiquidityEvent {
+  option (schema.table) = {
+    name: "modify_liquidity_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string pool_id = 8;
+  string sender = 9;
+  string tick_lower = 10;
+  string tick_upper = 11;
+  string liquidity_delta = 12;
+  string salt = 13;
+}
+
+message PositionTransferEvent {
+  option (schema.table) = {
+    name: "position_transfer_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string from_address = 8;
+  string to_address = 9;
+  string token_id = 10;
+}
+
+message PositionSubscriptionEvent {
+  option (schema.table) = {
+    name: "position_subscription_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token_id = 8;
+  string subscriber = 9;
+}
+
+message PositionUnsubscriptionEvent {
+  option (schema.table) = {
+    name: "position_unsubscription_events"
+    clickhouse_table_options: {
+      order_by_fields: [{name: "id"}, {name: "block_number"}, {name: "log_index"}]
+      partition_fields: [{name: "_block_timestamp_", function: toYYYYMM}]
+    }
+  };
+
+  string id = 1 [(schema.field) = { primary_key: true }];
+  uint64 block_number = 2;
+  uint64 block_timestamp = 3;
+  string transaction_hash = 4;
+  uint32 log_index = 5;
+  string contract = 6;
+  string event_name = 7;
+  string token_id = 8;
+  string subscriber = 9;
+}

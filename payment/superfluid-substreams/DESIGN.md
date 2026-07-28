@@ -79,7 +79,7 @@ Upstream reference:
 **GraphQL:** optional [Hasura](https://hasura.io/graphql/database/clickhouse) layer over ClickHouse (`api_*` views). Read-oriented; does not write protocol state.  
 Public `api_*` views + track list + examples: **`sql/hasura/`**. Internal HOL: `sql/clickhouse/`. Ops: `docker-compose.yml` + `scripts/hasura_connect_clickhouse.sh`.
 
-**Hard rule:** ClickHouse is filled **only** by Substreams (`map_events` → `substreams-sink-sql from-proto`). No GraphQL seed scripts, no manual registry inserts from the subgraph.
+**Hard rule:** ClickHouse is filled **only** by Substreams (`map_events` → `substreams sink clickhouse`). No GraphQL seed scripts, no manual registry inserts from the subgraph.
 
 ---
 

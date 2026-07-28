@@ -4,14 +4,16 @@
 
 **Source:** [streamingfast/substreams-chain-modules · payment/superfluid-substreams](https://github.com/streamingfast/substreams-chain-modules/tree/main/payment/superfluid-substreams) — clone this package before running.
 
-**Marketing page (showcases):** [docs/superfluid](https://github.com/streamingfast/showcases/tree/master/docs/superfluid) · open [`index.html`](https://github.com/streamingfast/showcases/blob/master/docs/superfluid/index.html) from the [showcases](https://github.com/streamingfast/showcases) repo.
+**Registry:** [superfluid-substreams@v0.2.3](https://substreams.dev/packages/superfluid-substreams/v0.2.3)
+
+**Marketing page:** [substreams.dev/showcases/superfluid](https://substreams.dev/showcases/superfluid) · Next.js source in [substreams-dev `src/app/showcases/superfluid`](https://github.com/streamingfast/substreams-dev/tree/develop/src/app/showcases/superfluid).
 
 ### Why Substreams
 
 Substreams sits at the center of this package: deterministic decoding, parallel backfill with module caching, and a portable `.spkg` you can sink anywhere. ClickHouse and Hasura consume Substreams output — they don’t re-scan the chain.
 
 1. **Substreams extract** — WASM modules decode CFA / IDA / GDA / factory logs (address-gated, typed protobuf).
-2. **Substreams sink** — `substreams-sink-sql from-proto` inserts events into ClickHouse (append-only, reorg-aware).
+2. **Substreams sink** — `substreams sink clickhouse` inserts events into ClickHouse (append-only, reorg-aware; relational mappings from protobuf).
 3. **Serve Substreams data** — SQL views compute streams, pools, memberships; Hasura exposes GraphQL.
 
 Coming from a **subgraph**? Same Superfluid surface, different indexing engine (Substreams instead of Graph Node). You still get GraphQL for apps — plus raw SQL analytics and a reusable Substreams package. Business HOL lives in SQL views, not WASM stores.
@@ -47,20 +49,21 @@ query OpenStreams {
 
 **Package path:** [github.com/streamingfast/substreams-chain-modules/tree/main/payment/superfluid-substreams](https://github.com/streamingfast/substreams-chain-modules/tree/main/payment/superfluid-substreams)
 
+**Prerequisites:** install the [Substreams CLI](https://docs.substreams.dev/how-to-guides/installing-the-cli) (includes `substreams sink clickhouse` / `postgres` — see the [SQL sink migration](https://docs.substreams.dev/how-to-guides/sinks/sql/migration)). Docker for the local ClickHouse + Hasura stack.
+
 Clone the chain-modules repo and run everything from the package directory:
 
 ```bash
 git clone https://github.com/streamingfast/substreams-chain-modules.git
 cd substreams-chain-modules/payment/superfluid-substreams
 docker compose up -d                    # ClickHouse + Hasura
-# substreams auth                       # once
-substreams-sink-sql from-proto \
-  clickhouse://default:SecureMe!@127.0.0.1:9000/superfluid \
-  ./substreams.yaml map_events \
+# substreams auth                       # once (see installing-the-cli)
+substreams sink clickhouse superfluid-substreams@v0.2.3 \
+  --dsn "clickhouse://default:SecureMe!@127.0.0.1:9000/superfluid" \
   -s 1000000 --network base \
   --bytes-encoding hex \
-  --clickhouse-cursor-file-path ./cursor.txt \
-  --clickhouse-sink-info-folder ./ch-sink-info
+  --cursor-file-path ./cursor.txt \
+  --sink-info-folder ./ch-sink-info
 # after tables exist:
 ./scripts/apply_views.sh
 ./scripts/hasura_connect_clickhouse.sh
@@ -79,23 +82,23 @@ Then open the Console or hit `/v1/graphql` as above.
 | Module | Kind | Role |
 |--------|------|------|
 | `store_dynamic_addresses` | store | SuperToken / Pool / gov **addresses only** |
-| `map_events` | map | Typed protocol events → ClickHouse from-proto |
+| `map_events` | map | Typed protocol events → ClickHouse (relational mappings) |
 
 Business HOL (streams, pools, …) is **not** in Substreams stores — it lives in SQL. See [DESIGN.md](./DESIGN.md).
 
 ### Build
 
 ```bash
-cd superfluid
+cd payment/superfluid-substreams
 substreams build
-# → superfluid-v0.2.3.spkg
+# → superfluid-substreams-v0.2.3.spkg
 ```
 
 ### Smoke run (events only)
 
 ```bash
 substreams auth
-substreams run ./substreams.yaml map_events \
+substreams run superfluid-substreams@v0.2.3 map_events \
   --network base \
   -s 1000000 -t +200 \
   -o jsonl
@@ -103,7 +106,7 @@ substreams run ./substreams.yaml map_events \
 
 ### Full local stack
 
-**All protocol rows come from Substreams** (`from-proto`). No GraphQL seeds into ClickHouse.
+**All protocol rows come from Substreams** (relational / from-proto mode). No GraphQL seeds into ClickHouse.
 
 ```bash
 docker compose up -d
@@ -113,14 +116,14 @@ curl -u 'default:SecureMe!' 'http://127.0.0.1:8123/' --data 'DROP DATABASE IF EX
 curl -u 'default:SecureMe!' 'http://127.0.0.1:8123/' --data 'CREATE DATABASE superfluid'
 
 export SUBSTREAMS_API_TOKEN=…   # or substreams auth
-substreams-sink-sql from-proto \
-  clickhouse://default:SecureMe!@127.0.0.1:9000/superfluid \
-  ./substreams.yaml map_events \
+# or: export SUBSTREAMS_SINK_DSN='clickhouse://default:SecureMe!@127.0.0.1:9000/superfluid'
+substreams sink clickhouse superfluid-substreams@v0.2.3 \
+  --dsn "clickhouse://default:SecureMe!@127.0.0.1:9000/superfluid" \
   -s 1000000 \
   --network base \
-  --block-batch-size 50 --bytes-encoding hex \
-  --clickhouse-cursor-file-path ./cursor.txt \
-  --clickhouse-sink-info-folder ./ch-sink-info
+  --batch-block-flush-interval 50 --bytes-encoding hex \
+  --cursor-file-path ./cursor.txt \
+  --sink-info-folder ./ch-sink-info
 
 ./scripts/apply_views.sh
 ./scripts/hasura_connect_clickhouse.sh

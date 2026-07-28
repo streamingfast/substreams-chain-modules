@@ -2,6 +2,7 @@
 members = [
     "dex/bancor-v3-substreams",
     "dex/velodrome-substreams",
+    "dex/uniswap-v4-substreams",
     "lending/inverse-finance-substreams",
     "staking/tokemak-substreams",
     "lending/compound-v3-substreams",
