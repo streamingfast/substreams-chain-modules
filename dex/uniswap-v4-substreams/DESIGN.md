@@ -1,7 +1,7 @@
 # Uniswap v4 → Substreams (ClickHouse) — Design
 
 **Status:** package in `dex/uniswap-v4-substreams` (sg2ss)  
-**Network (v1):** Base  
+**Networks:** every chain with a Uniswap v4 deployment (see README)  
 **Sink:** ClickHouse relational mappings via `substreams sink clickhouse` (insert-only)  
 **Upstream subgraph:** [Uniswap/v4-subgraph](https://github.com/Uniswap/v4-subgraph)  
 **Placement:** [substreams-chain-modules](https://github.com/streamingfast/substreams-chain-modules) · `dex/uniswap-v4-substreams`  
@@ -27,16 +27,13 @@ Uniswap **v4 pools are not separate contracts**. All pool lifecycle events (`Ini
 → **No dynamic pool-address store required for Tier A+B.**  
 Address-gate only the fixed PoolManager + PositionManager (ERC-721 `Transfer` is generic — must not be topic-only).
 
-## Fixed contracts (Base)
+## Per-network contracts
 
-From `networks.json` in v4-subgraph:
-
-| Role | Address | startBlock |
-|------|---------|------------|
-| PoolManager | `0x498581fF718922c3f8e6A244956aF099B2652b2b` | **25350988** |
-| PositionManager | `0x7C5f5A4bBd8fD63184577525326123B519429bDc` | 25350993 |
-
-Package `initialBlock`: **25350988**.
+`map_events` is address-gated on the chain's PoolManager and PositionManager, both
+supplied as params (`pool_manager=0x...&position_manager=0x...`). The manifest's
+`networks:` block sets those params and the matching `initialBlock` for each supported
+network; `--network` picks the entry. Addresses track `networks.json` in v4-subgraph —
+see the README table for the full list.
 
 ## Modules
 
@@ -75,7 +72,6 @@ No `store_dynamic_*` in v0.1 (can add later for optional hook factories / token 
 - USD pricing / `volumeUSD` / `Bundle` (subgraph eth_call + pricing utils)  
 - Tick entities, day/hour candles as full subgraph parity  
 - Arrakis / Euler hook factories  
-- Multi-chain packages  
 
 ## Parity checklist (core)
 

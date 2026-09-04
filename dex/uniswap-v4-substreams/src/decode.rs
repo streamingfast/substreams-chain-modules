@@ -1,12 +1,52 @@
 use crate::abi;
 use crate::pb::uniswap::v4 as v4;
+use substreams::errors::Error;
 use substreams::Hex;
 use substreams_ethereum::pb::eth::v2 as eth;
 use substreams_ethereum::Event;
 
-// Base mainnet — Uniswap v4 (from official v4-subgraph networks.json)
-const POOL_MANAGER: &str = "498581ff718922c3f8e6a244956af099b2652b2b";
-const POSITION_MANAGER: &str = "7c5f5a4bbd8fd63184577525326123b519429bdc";
+/// Per-network Uniswap v4 contract addresses, supplied as module params in the
+/// form `pool_manager=0x...&position_manager=0x...`.
+pub struct Config {
+    pool_manager: String,
+    position_manager: String,
+}
+
+impl Config {
+    pub fn parse(params: &str) -> Result<Self, Error> {
+        let mut pool_manager = None;
+        let mut position_manager = None;
+
+        for entry in params.split('&').filter(|e| !e.trim().is_empty()) {
+            let (key, value) = entry.split_once('=').ok_or_else(|| {
+                Error::msg(format!("invalid params entry {entry:?}, expected key=value"))
+            })?;
+            match key.trim() {
+                "pool_manager" => pool_manager = Some(normalize_address(key, value)?),
+                "position_manager" => position_manager = Some(normalize_address(key, value)?),
+                other => return Err(Error::msg(format!("unknown params key {other:?}"))),
+            }
+        }
+
+        Ok(Self {
+            pool_manager: pool_manager
+                .ok_or_else(|| Error::msg("missing required param 'pool_manager'"))?,
+            position_manager: position_manager
+                .ok_or_else(|| Error::msg("missing required param 'position_manager'"))?,
+        })
+    }
+}
+
+/// Lowercase, un-prefixed hex, matching the encoding of `log.address`.
+fn normalize_address(key: &str, value: &str) -> Result<String, Error> {
+    let addr = value.trim().trim_start_matches("0x").trim_start_matches("0X").to_lowercase();
+    if addr.len() != 40 || !addr.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(Error::msg(format!(
+            "invalid address {value:?} for param {key:?}, expected a 20-byte hex address"
+        )));
+    }
+    Ok(addr)
+}
 
 struct BlockMeta {
     number: u64,
@@ -21,15 +61,11 @@ fn addr_hex(addr: &[u8]) -> String {
     hex::encode(addr)
 }
 
-fn is_fixed(contract: &str, expected: &str) -> bool {
-    contract == expected
-}
-
 fn bytes32_hex(b: &[u8]) -> String {
     hex::encode(b)
 }
 
-pub fn decode_block(blk: &eth::Block) -> v4::Events {
+pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
     let mut out = v4::Events::default();
     let meta = BlockMeta {
         number: blk.number,
@@ -43,9 +79,9 @@ pub fn decode_block(blk: &eth::Block) -> v4::Events {
             let log_index = log.index;
             let id = event_id(&tx_hash, log_index);
 
-            // ---- PoolManager (fixed) ----
+            // ---- PoolManager (address-gated) ----
             if let Some(event) = abi::pool_manager::events::Initialize::match_and_decode(log) {
-                if is_fixed(&contract, POOL_MANAGER) {
+                if contract == config.pool_manager {
                     out.initialize_events.push(v4::InitializeEvent {
                         id: id.clone(),
                         block_number: meta.number,
@@ -68,7 +104,7 @@ pub fn decode_block(blk: &eth::Block) -> v4::Events {
             }
 
             if let Some(event) = abi::pool_manager::events::Swap::match_and_decode(log) {
-                if is_fixed(&contract, POOL_MANAGER) {
+                if contract == config.pool_manager {
                     out.swap_events.push(v4::SwapEvent {
                         id: id.clone(),
                         block_number: meta.number,
@@ -92,7 +128,7 @@ pub fn decode_block(blk: &eth::Block) -> v4::Events {
 
             if let Some(event) = abi::pool_manager::events::ModifyLiquidity::match_and_decode(log)
             {
-                if is_fixed(&contract, POOL_MANAGER) {
+                if contract == config.pool_manager {
                     out.modify_liquidity_events.push(v4::ModifyLiquidityEvent {
                         id: id.clone(),
                         block_number: meta.number,
@@ -112,9 +148,9 @@ pub fn decode_block(blk: &eth::Block) -> v4::Events {
                 continue;
             }
 
-            // ---- PositionManager (fixed; Transfer is generic ERC-721) ----
+            // ---- PositionManager (address-gated; Transfer is generic ERC-721) ----
             if let Some(event) = abi::position_manager::events::Transfer::match_and_decode(log) {
-                if is_fixed(&contract, POSITION_MANAGER) {
+                if contract == config.position_manager {
                     out.position_transfer_events.push(v4::PositionTransferEvent {
                         id: id.clone(),
                         block_number: meta.number,
@@ -134,7 +170,7 @@ pub fn decode_block(blk: &eth::Block) -> v4::Events {
             if let Some(event) =
                 abi::position_manager::events::Subscription::match_and_decode(log)
             {
-                if is_fixed(&contract, POSITION_MANAGER) {
+                if contract == config.position_manager {
                     out.position_subscription_events
                         .push(v4::PositionSubscriptionEvent {
                             id: id.clone(),
@@ -154,7 +190,7 @@ pub fn decode_block(blk: &eth::Block) -> v4::Events {
             if let Some(event) =
                 abi::position_manager::events::Unsubscription::match_and_decode(log)
             {
-                if is_fixed(&contract, POSITION_MANAGER) {
+                if contract == config.position_manager {
                     out.position_unsubscription_events
                         .push(v4::PositionUnsubscriptionEvent {
                             id: id.clone(),
