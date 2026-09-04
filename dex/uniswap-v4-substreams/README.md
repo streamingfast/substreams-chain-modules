@@ -62,8 +62,7 @@ To point the module at contracts not listed here, override the params directly:
 
 ```bash
 substreams run ./substreams.yaml map_events \
-  --network base \
-  -p map_events="pool_manager=0x498581ff718922c3f8e6a244956af099b2652b2b&position_manager=0x7c5f5a4bbd8fd63184577525326123b519429bdc"
+  --network base
 ```
 
 ## Prerequisites
@@ -82,7 +81,16 @@ cd dex/uniswap-v4-substreams && substreams build
 # → uniswap-v4-substreams-v0.1.0.spkg
 ```
 
-## Get running
+## Sink to Postgres (without views and docker helpers)
+
+(You need a postgresql instance accessible with DSN)
+
+```
+DSN="psql://user:$PASSWORD@host:port/dbname?schemaName=..."
+substreams sink postgres uniswap-v4-substreams map_events  --dsn "$DSN" --spool-dir=/path/to/tmpdir --spool-max-size=8GiB --network=base
+```
+
+## Sink To Clickhouse
 
 ```bash
 git clone https://github.com/streamingfast/substreams-chain-modules.git
@@ -91,10 +99,9 @@ cd substreams-chain-modules/dex/uniswap-v4-substreams
 docker compose up -d                    # ClickHouse + Hasura + connector
 # substreams auth                       # once
 
-substreams sink clickhouse ./substreams.yaml \
+substreams sink clickhouse ./substreams.yaml map_events \
   --dsn "clickhouse://default:SecureMe!@127.0.0.1:9000/uniswap_v4" \
   --network base \
-  --batch-block-flush-interval 50 \
   --bytes-encoding hex \
   --cursor-file-path ./cursor.txt \
   --sink-info-folder ./ch-sink-info
@@ -139,3 +146,5 @@ More examples: [`sql/hasura/examples.graphql`](./sql/hasura/examples.graphql)
 - Tick entities, day/hour aggregates as full subgraph parity  
 - Hook factory extras (Arrakis/Euler)  
 - Token metadata eth_call  
+
+
