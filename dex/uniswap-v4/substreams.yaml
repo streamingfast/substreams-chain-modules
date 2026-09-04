@@ -1,8 +1,8 @@
 specVersion: v0.1.0
 package:
-  name: uniswap-v4-substreams
+  name: uniswap-v4
   version: v0.1.1
-  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/dex/uniswap-v4-substreams
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/dex/uniswap-v4
   description: >
     Uniswap v4 — event decode only (PoolManager + PositionManager) on every chain
     where v4 is deployed;

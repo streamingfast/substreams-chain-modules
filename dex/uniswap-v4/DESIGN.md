@@ -1,10 +1,10 @@
 # Uniswap v4 → Substreams (ClickHouse) — Design
 
-**Status:** package in `dex/uniswap-v4-substreams` (sg2ss)  
+**Status:** package in `dex/uniswap-v4` (sg2ss)  
 **Networks:** every chain with a Uniswap v4 deployment (see README)  
 **Sink:** ClickHouse relational mappings via `substreams sink clickhouse` (insert-only)  
 **Upstream subgraph:** [Uniswap/v4-subgraph](https://github.com/Uniswap/v4-subgraph)  
-**Placement:** [substreams-chain-modules](https://github.com/streamingfast/substreams-chain-modules) · `dex/uniswap-v4-substreams`  
+**Placement:** [substreams-chain-modules](https://github.com/streamingfast/substreams-chain-modules) · `dex/uniswap-v4`  
 **Tier:** **A + B** (event feed + core HOL: Pool, Swap, ModifyLiquidity, Position ownership)
 
 ## Principles (sg2ss)

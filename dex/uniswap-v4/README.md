@@ -10,7 +10,7 @@ sg2ss conversion of [Uniswap/v4-subgraph](https://github.com/Uniswap/v4-subgraph
 
 **No Substreams stores** for Tier A+B — v4 pool events all come from a single PoolManager per chain.
 
-**Source:** [streamingfast/substreams-chain-modules · dex/uniswap-v4-substreams](https://github.com/streamingfast/substreams-chain-modules/tree/main/dex/uniswap-v4-substreams)
+**Source:** [streamingfast/substreams-chain-modules · dex/uniswap-v4](https://github.com/streamingfast/substreams-chain-modules/tree/main/dex/uniswap-v4)
 
 **Showcase:** [substreams.dev/showcases/uniswap-v4](https://substreams.dev/showcases/uniswap-v4)
 
@@ -77,8 +77,8 @@ From the monorepo root (workspace member):
 cd substreams-chain-modules
 cargo build -p uniswap_v4_substreams --release --target wasm32-unknown-unknown
 # or:
-cd dex/uniswap-v4-substreams && substreams build
-# → uniswap-v4-substreams-v0.1.0.spkg
+cd dex/uniswap-v4 && substreams build
+# → uniswap-v4-v0.1.0.spkg
 ```
 
 ## Sink to Postgres (without views and docker helpers)
@@ -87,14 +87,14 @@ cd dex/uniswap-v4-substreams && substreams build
 
 ```
 DSN="psql://user:$PASSWORD@host:port/dbname?schemaName=..."
-substreams sink postgres uniswap-v4-substreams map_events  --dsn "$DSN" --spool-dir=/path/to/tmpdir --spool-max-size=8GiB --network=base
+substreams sink postgres uniswap-v4 map_events  --dsn "$DSN" --spool-dir=/path/to/tmpdir --spool-max-size=8GiB --network=base
 ```
 
 ## Sink To Clickhouse
 
 ```bash
 git clone https://github.com/streamingfast/substreams-chain-modules.git
-cd substreams-chain-modules/dex/uniswap-v4-substreams
+cd substreams-chain-modules/dex/uniswap-v4
 
 docker compose up -d                    # ClickHouse + Hasura + connector
 # substreams auth                       # once
