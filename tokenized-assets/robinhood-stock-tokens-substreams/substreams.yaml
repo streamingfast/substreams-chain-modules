@@ -1,26 +1,30 @@
 specVersion: v0.1.0
 package:
   name: robinhood-stock-tokens-substreams
-  version: v0.1.0
+  version: v0.2.0
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/tokenized-assets/robinhood-stock-tokens-substreams
   description: >
     Onchain basis for Robinhood Chain stock tokens: Uniswap V4 stock-token swaps
     (via uniswap-v4-robinhood by PaulieB14), Chainlink tokenized-equity reference
-    prices, and the implied-vs-reference premium per trade, sunk to ClickHouse.
-    Built with Substreams Skills.
+    prices, and the implied-vs-reference premium per trade, as substreams-sink-sql
+    from-proto rows for ClickHouse. Built with Substreams Skills.
 
 network: robinhood
 
 imports:
   u4rh: https://spkg.io/PaulieB14/uniswap-v4-robinhood-v0.1.2.spkg
-  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
-  sql: https://github.com/streamingfast/substreams-sink-sql/releases/download/protodefs-v1.0.7/substreams-sink-sql-protodefs-v1.0.7.spkg
 
 protobuf:
   files:
     - hood/basis/v1/basis.proto
+    # Vendored from substreams-sink-sql; must be listed here so pack bundles
+    # it (imports are resolved but not embedded), or the (schema.table) options
+    # on basis.proto cannot be decoded by the sink or by `substreams info`.
+    - sf/substreams/sink/sql/schema/v1/schema.proto
   importPaths:
     - ./proto
+  # Rust codegen only. basis.proto imports the sink schema, so buf still
+  # generates src/pb/schema.rs for it (--include-imports); that is expected.
   excludePaths:
     - sf/substreams
     - sf/ethereum
@@ -81,20 +85,13 @@ modules:
     output:
       type: proto:hood.basis.v1.BasisTicks
 
-  - name: db_out
+  - name: map_rows
     kind: map
     initialBlock: 9070
-    doc: ClickHouse rows for stock_swaps, chainlink_answers and basis_ticks. stock_registry is seeded by schema.clickhouse.sql, not emitted here.
+    doc: Sink module for `substreams-sink-sql from-proto`; stock_swaps, chainlink_answers and basis_ticks rows with id, block_time and ClickHouse-safe decimals.
     inputs:
       - map: map_stock_swaps
       - map: map_chainlink_answers
       - map: map_basis
     output:
-      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
-
-sink:
-  module: db_out
-  type: sf.substreams.sink.sql.v1.Service
-  config:
-    schema: ./schema.clickhouse.sql
-    engine: clickhouse
+      type: proto:hood.basis.v1.Rows

@@ -65,6 +65,7 @@ pub fn build(block: &Block) -> ChainlinkAnswers {
             answer_usd: price::fmt(&ev.current.to_decimal(ANSWER_DECIMALS)),
             round_id: ev.round_id.to_string(),
             updated_at: ev.updated_at,
+            ..Default::default()
         });
     }
     out

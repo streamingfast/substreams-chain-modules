@@ -1,19 +1,18 @@
 mod basis;
 mod chainlink;
-mod db_out;
 mod pb;
 mod price;
 mod registry;
+mod rows;
 mod session;
 mod swaps;
 
 use substreams::errors::Error;
 use substreams::scalar::BigDecimal;
 use substreams::store::{StoreGet, StoreGetString, StoreNew, StoreSet, StoreSetString};
-use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_ethereum::pb::eth::v2::Block;
 
-use pb::hood::basis::v1::{BasisTicks, ChainlinkAnswers, StockSwaps};
+use pb::hood::basis::v1::{BasisTicks, ChainlinkAnswers, Rows, StockSwaps};
 use pb::uniswap::v4::v1::Events;
 
 #[substreams::handlers::map]
@@ -80,6 +79,6 @@ fn map_basis(swaps: StockSwaps, refs: StoreGetString, closes: StoreGetString) ->
 }
 
 #[substreams::handlers::map]
-fn db_out(swaps: StockSwaps, answers: ChainlinkAnswers, ticks: BasisTicks) -> Result<DatabaseChanges, Error> {
-    Ok(db_out::build(&swaps, &answers, &ticks))
+fn map_rows(swaps: StockSwaps, answers: ChainlinkAnswers, ticks: BasisTicks) -> Result<Rows, Error> {
+    Ok(rows::build(swaps, answers, ticks))
 }
