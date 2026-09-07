@@ -8,7 +8,6 @@ mod session;
 mod swaps;
 
 use substreams::errors::Error;
-use substreams::pb::substreams::Clock;
 use substreams::scalar::BigDecimal;
 use substreams::store::{StoreGet, StoreGetString, StoreNew, StoreSet, StoreSetString};
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
@@ -42,7 +41,7 @@ fn store_ref_price(answers: ChainlinkAnswers, store: StoreSetString) {
         store.set(
             a.log_index as u64,
             basis::ref_key(&a.ticker),
-            &basis::encode_ref(&a.answer_usd, a.updated_at, a.block_ts),
+            &basis::encode_ref(&a.answer_usd, a.updated_at),
         );
     }
 }
@@ -51,6 +50,12 @@ fn store_ref_price(answers: ChainlinkAnswers, store: StoreSetString) {
 fn store_session_close(swaps: StockSwaps, store: StoreSetString) {
     for s in &swaps.swaps {
         if s.ticker.is_empty() || s.price_usd.is_empty() || session::classify(s.block_ts) != session::Session::Regular {
+            continue;
+        }
+        let Some(price_usd) = price::parse(&s.price_usd) else {
+            continue;
+        };
+        if price_usd <= BigDecimal::zero() {
             continue;
         }
         store.set(
@@ -75,11 +80,6 @@ fn map_basis(swaps: StockSwaps, refs: StoreGetString, closes: StoreGetString) ->
 }
 
 #[substreams::handlers::map]
-fn db_out(
-    clock: Clock,
-    swaps: StockSwaps,
-    answers: ChainlinkAnswers,
-    ticks: BasisTicks,
-) -> Result<DatabaseChanges, Error> {
-    Ok(db_out::build(&clock, &swaps, &answers, &ticks))
+fn db_out(swaps: StockSwaps, answers: ChainlinkAnswers, ticks: BasisTicks) -> Result<DatabaseChanges, Error> {
+    Ok(db_out::build(&swaps, &answers, &ticks))
 }

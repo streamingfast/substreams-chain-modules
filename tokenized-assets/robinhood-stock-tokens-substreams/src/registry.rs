@@ -71,9 +71,9 @@ mod tests {
 
     #[test]
     fn known_lookups() {
-        let nvda = asset_by_token("0x92fd66527192e3e61d4ddd13322aa222de86f9b5").unwrap();
-        assert_eq!(nvda.ticker, "SGOV");
-        assert_eq!(nvda.decimals, 18);
+        let sgov = asset_by_token("0x92fd66527192e3e61d4ddd13322aa222de86f9b5").unwrap();
+        assert_eq!(sgov.ticker, "SGOV");
+        assert_eq!(sgov.decimals, 18);
         assert_eq!(
             feed_by_aggregator("0x0e96b7708487f91baac09697593d3e8bf253f2d8")
                 .unwrap()

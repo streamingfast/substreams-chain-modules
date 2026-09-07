@@ -1,35 +1,17 @@
 //! ClickHouse rows. Inserts only; the sink dedupes on the ReplacingMergeTree key.
+//!
+//! `stock_registry` is not written here: it is seeded once by the INSERT
+//! statement generated into schema.clickhouse.sql (see
+//! scripts/gen-registry-sql.sh), not emitted per block.
 
-use substreams::pb::substreams::Clock;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
 
 use crate::pb::hood::basis::v1::{BasisTicks, ChainlinkAnswers, StockSwaps};
 use crate::price;
-use crate::registry;
 
-/// PoolManager deployment block; the registry snapshot is written once here.
-pub const REGISTRY_BLOCK: u64 = 9070;
-
-pub fn build(clock: &Clock, swaps: &StockSwaps, answers: &ChainlinkAnswers, ticks: &BasisTicks) -> DatabaseChanges {
+pub fn build(swaps: &StockSwaps, answers: &ChainlinkAnswers, ticks: &BasisTicks) -> DatabaseChanges {
     let mut tables = Tables::new();
-
-    if clock.number == REGISTRY_BLOCK {
-        for a in registry::ASSETS {
-            let feed = registry::feed_by_token(a.token);
-            tables
-                .create_row("stock_registry", a.token)
-                .set("ticker", a.ticker)
-                .set("token", a.token)
-                .set("feed", feed.map(|f| f.proxy).unwrap_or(""))
-                .set("aggregator", feed.map(|f| f.aggregator).unwrap_or(""))
-                .set("multiplier_str", dec(a.multiplier))
-                .set("decimals", a.decimals)
-                .set("status", a.status)
-                .set("name", a.name)
-                .set("has_feed", feed.is_some());
-        }
-    }
 
     for s in &swaps.swaps {
         tables
@@ -49,6 +31,7 @@ pub fn build(clock: &Clock, swaps: &StockSwaps, answers: &ChainlinkAnswers, tick
             .set("amount_usd_str", dec(&s.amount_usd))
             .set("price_usd_str", dec(&s.price_usd))
             .set("priced", !s.price_usd.is_empty())
+            .set("shares_known", !s.shares_ui.is_empty())
             .set("sender", &s.sender)
             .set("origin", &s.origin)
             .set("fee", s.fee)
@@ -118,38 +101,11 @@ mod tests {
     use crate::pb::hood::basis::v1::{BasisTick, ChainlinkAnswer, StockSwap};
     use substreams_database_change::pb::sf::substreams::sink::database::v1::table_change::Operation;
 
-    fn clock(number: u64) -> Clock {
-        Clock {
-            number,
-            ..Default::default()
-        }
-    }
-
     fn changes_for<'a>(
         db: &'a DatabaseChanges,
         table: &str,
     ) -> Vec<&'a substreams_database_change::pb::sf::substreams::sink::database::v1::TableChange> {
         db.table_changes.iter().filter(|c| c.table == table).collect()
-    }
-
-    #[test]
-    fn registry_only_at_deployment_block() {
-        let empty = (
-            StockSwaps::default(),
-            ChainlinkAnswers::default(),
-            BasisTicks::default(),
-        );
-        let at = build(&clock(REGISTRY_BLOCK), &empty.0, &empty.1, &empty.2);
-        let reg = changes_for(&at, "stock_registry");
-        assert_eq!(reg.len(), registry::ASSETS.len());
-        let with_feed = reg
-            .iter()
-            .filter(|c| c.fields.iter().any(|f| f.name == "has_feed" && f.value == "true"))
-            .count();
-        assert_eq!(with_feed, registry::FEEDS.len());
-
-        let later = build(&clock(REGISTRY_BLOCK + 1), &empty.0, &empty.1, &empty.2);
-        assert!(later.table_changes.is_empty());
     }
 
     #[test]
@@ -159,6 +115,7 @@ mod tests {
                 tx_hash: "0xa".into(),
                 log_index: 2,
                 price_usd: "".into(),
+                shares_ui: "".into(),
                 ..Default::default()
             }],
             ..Default::default()
@@ -179,7 +136,7 @@ mod tests {
                 ..Default::default()
             }],
         };
-        let db = build(&clock(100), &swaps, &answers, &ticks);
+        let db = build(&swaps, &answers, &ticks);
         assert_eq!(db.table_changes.len(), 3);
         for c in &db.table_changes {
             assert_eq!(c.operation, Operation::Create as i32);
@@ -189,6 +146,7 @@ mod tests {
         assert_eq!(field("price_usd_str"), Some("0"));
         assert!(field("price_usd").is_none());
         assert_eq!(field("priced"), Some("false"));
+        assert_eq!(field("shares_known"), Some("false"));
         let answer = &changes_for(&db, "chainlink_answers")[0];
         assert!(answer
             .fields
@@ -196,6 +154,25 @@ mod tests {
             .any(|f| f.name == "answer_usd_str" && f.value == "1.5"));
         let tick = &changes_for(&db, "basis_ticks")[0];
         assert!(tick.fields.iter().any(|f| f.name == "premium_bps" && f.value == "-7"));
+    }
+
+    #[test]
+    fn shares_known_reflects_shares_ui_independently_of_priced() {
+        let swaps = StockSwaps {
+            swaps: vec![StockSwap {
+                tx_hash: "0xc".into(),
+                log_index: 1,
+                price_usd: "".into(),
+                shares_ui: "12.5".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let db = build(&swaps, &ChainlinkAnswers::default(), &BasisTicks::default());
+        let swap = &changes_for(&db, "stock_swaps")[0];
+        let field = |n: &str| swap.fields.iter().find(|f| f.name == n).map(|f| f.value.as_str());
+        assert_eq!(field("priced"), Some("false"));
+        assert_eq!(field("shares_known"), Some("true"));
     }
 
     #[test]

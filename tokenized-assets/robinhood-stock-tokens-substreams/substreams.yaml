@@ -84,9 +84,8 @@ modules:
   - name: db_out
     kind: map
     initialBlock: 9070
-    doc: ClickHouse rows for stock_swaps, chainlink_answers, basis_ticks, plus stock_registry once at block 9070.
+    doc: ClickHouse rows for stock_swaps, chainlink_answers and basis_ticks. stock_registry is seeded by schema.clickhouse.sql, not emitted here.
     inputs:
-      - source: sf.substreams.v1.Clock
       - map: map_stock_swaps
       - map: map_chainlink_answers
       - map: map_basis

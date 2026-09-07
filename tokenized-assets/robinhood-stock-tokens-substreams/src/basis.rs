@@ -16,9 +16,9 @@ pub fn close_key(ticker: &str) -> String {
     format!("{CLOSE_PREFIX}{ticker}")
 }
 
-/// "<answer_usd>|<updated_at>|<block_ts>"
-pub fn encode_ref(answer_usd: &str, updated_at: u64, block_ts: u64) -> String {
-    format!("{answer_usd}|{updated_at}|{block_ts}")
+/// "<answer_usd>|<updated_at>"
+pub fn encode_ref(answer_usd: &str, updated_at: u64) -> String {
+    format!("{answer_usd}|{updated_at}")
 }
 
 /// "<price_usd>|<block_ts>"
@@ -32,33 +32,19 @@ struct Reference {
     source: &'static str,
 }
 
-fn parse_ref(v: &str) -> Option<Reference> {
+/// Parses a "<price>|<ts>" value written by encode_ref or encode_close.
+fn parse_stored(v: &str, source: &'static str) -> Option<Reference> {
     let mut parts = v.split('|');
     let usd = parts.next()?.to_string();
     let ts = parts.next()?.parse().ok()?;
-    Some(Reference {
-        usd,
-        ts,
-        source: "chainlink",
-    })
-}
-
-fn parse_close(v: &str) -> Option<Reference> {
-    let mut parts = v.split('|');
-    let usd = parts.next()?.to_string();
-    let ts = parts.next()?.parse().ok()?;
-    Some(Reference {
-        usd,
-        ts,
-        source: "session_close",
-    })
+    Some(Reference { usd, ts, source })
 }
 
 pub fn tick(swap: &StockSwap, ref_value: Option<&str>, close_value: Option<&str>) -> Option<BasisTick> {
     let implied = price::parse(&swap.price_usd)?;
     let reference = ref_value
-        .and_then(parse_ref)
-        .or_else(|| close_value.and_then(parse_close));
+        .and_then(|v| parse_stored(v, "chainlink"))
+        .or_else(|| close_value.and_then(|v| parse_stored(v, "session_close")));
 
     let (ref_usd, ref_ts, ref_source, premium_bps) = match reference {
         Some(r) => {
@@ -107,7 +93,7 @@ mod tests {
 
     #[test]
     fn chainlink_reference_wins() {
-        let t = tick(&swap("101"), Some("100|1781706000|1781706100"), Some("90|1781700000")).unwrap();
+        let t = tick(&swap("101"), Some("100|1781706000"), Some("90|1781700000")).unwrap();
         assert_eq!(t.ref_source, "chainlink");
         assert_eq!(t.ref_usd, "100");
         assert_eq!(t.ref_ts, 1_781_706_000);
@@ -135,14 +121,14 @@ mod tests {
 
     #[test]
     fn unpriced_swap_yields_no_tick() {
-        assert!(tick(&swap(""), Some("100|1|1"), None).is_none());
+        assert!(tick(&swap(""), Some("100|1"), None).is_none());
     }
 
     #[test]
     fn malformed_store_values_are_ignored() {
         let t = tick(&swap("99"), Some("garbage"), Some("100|1781700000")).unwrap();
         assert_eq!(t.ref_source, "session_close");
-        let t = tick(&swap("99"), Some("abc|1|1"), None).unwrap();
+        let t = tick(&swap("99"), Some("abc|1"), None).unwrap();
         assert_eq!(t.ref_source, "chainlink");
         assert_eq!(t.premium_bps, 0);
     }
@@ -151,7 +137,7 @@ mod tests {
     fn keys_and_encodings() {
         assert_eq!(ref_key("NVDA"), "ref:NVDA");
         assert_eq!(close_key("NVDA"), "close:NVDA");
-        assert_eq!(encode_ref("1.5", 2, 3), "1.5|2|3");
+        assert_eq!(encode_ref("1.5", 2), "1.5|2");
         assert_eq!(encode_close("1.5", 3), "1.5|3");
     }
 }
