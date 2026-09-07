@@ -70,6 +70,8 @@ substreams run ./robinhood-stock-tokens-substreams-v0.2.0.spkg map_chainlink_ans
 
 ## Sink
 
+The sink creates tables with `CREATE TABLE IF NOT EXISTS` and never alters them. Point it at a fresh database or schema; a database that still holds the v0.1 tables of the same names will accept the setup and then fail on the first insert.
+
 There is no schema file. `substreams-sink-sql from-proto` derives the tables
 from the `Rows` message and creates them itself on first run:
 
@@ -161,7 +163,7 @@ Sink notes:
   (`cursor.txt`, `<schema>_schema_hash.txt`; `--clickhouse-cursor-file-path`,
   `--clickhouse-sink-info-folder`), not rows in ClickHouse. Keep them with the
   sink's working directory.
-- `stock_registry` is not a table anymore; the registry snapshot is baked into
+- The registry snapshot is baked into
   the wasm from `data/`, and every row already carries `ticker` and `token`.
 
 ## Conventions
@@ -169,7 +171,7 @@ Sink notes:
 - Addresses are `0x`-prefixed lowercase; amounts are decimal strings in the protos, never floats.
 - `price_usd`, `implied_usd`, `answer_usd` are truncated to 18 decimals with trailing zeros removed.
 - `side` is from the trader's point of view: `buy` when the trader receives stock.
-- Unpriced swaps have empty `amount_usd` / `price_usd` in `map_stock_swaps` and `0` with `priced = false` in `map_rows` / ClickHouse. `shares_known` is a separate flag for whether `shares_ui` was populated upstream; an unpriced swap can still have known shares, and vice versa.
+- `priced` means upstream valued the swap, so `amount_usd` is real. `price_usd` additionally needs `shares_known`; when shares are unknown it is `0` even on a priced swap. Read the flags, not the zeros.
 - `map_basis` reads the stores with `get_first`, so every swap in a block is compared against the reference as it stood at the start of the block, never against a value written earlier in that same block.
 
 ## Caveats

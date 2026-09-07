@@ -82,7 +82,7 @@ fn convert(swap: &Swap) -> Result<StockSwap, Skip> {
         quote.symbol.to_string()
     };
 
-    let priced = !price_usd.is_empty();
+    let priced = swap.priced;
     let shares_known = !shares_ui.is_empty();
 
     let meta = swap.meta.as_ref();

@@ -5,9 +5,8 @@ import "google/protobuf/timestamp.proto";
 import "sf/substreams/sink/sql/schema/v1/schema.proto";
 
 // Root of map_rows, the module substreams-sink-sql consumes in from-proto
-// mode. Only the three annotated row messages below become tables; Rows itself
-// must never carry scalar or other message-typed fields, or the sink would
-// turn them into tables too.
+// mode. Only messages carrying (schema.table) become tables, so anything
+// reachable from Rows that is annotated is sunk. Rows itself is never a table.
 message Rows {
   repeated StockSwap stock_swaps = 1;
   repeated ChainlinkAnswer chainlink_answers = 2;
@@ -52,7 +51,7 @@ message StockSwap {
   string quote_amount = 13 [(schema.field) = { convertTo: { decimal128 { scale: 18 } } }]; // |quote leg adjusted|
   string amount_usd   = 14 [(schema.field) = { convertTo: { decimal128 { scale: 18 } } }];
   string price_usd    = 15 [(schema.field) = { convertTo: { decimal128 { scale: 18 } } }]; // amount_usd / shares_ui
-  bool   priced       = 22; // false when upstream could not price the swap (amount_usd / price_usd are then 0)
+  bool   priced       = 22; // upstream valued the swap: amount_usd is real. price_usd also needs shares_known.
   bool   shares_known = 23; // false when shares_ui was not populated upstream
   string sender       = 16;
   string origin       = 17;
