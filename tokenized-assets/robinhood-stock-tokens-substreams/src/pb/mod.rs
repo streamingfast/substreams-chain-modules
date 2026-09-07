@@ -8,6 +8,11 @@ pub mod hood {
         }
     }
 }
+// @@protoc_insertion_point(attribute:schema)
+pub mod schema {
+    include!("schema.rs");
+    // @@protoc_insertion_point(schema)
+}
 pub mod uniswap {
     pub mod v4 {
         // @@protoc_insertion_point(attribute:uniswap.v4.v1)

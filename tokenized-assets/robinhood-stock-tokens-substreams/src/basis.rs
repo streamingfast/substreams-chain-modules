@@ -70,6 +70,7 @@ pub fn tick(swap: &StockSwap, ref_value: Option<&str>, close_value: Option<&str>
         session: session::classify(swap.block_ts).as_str().to_string(),
         amount_usd: swap.amount_usd.clone(),
         side: swap.side.clone(),
+        ..Default::default()
     })
 }
 

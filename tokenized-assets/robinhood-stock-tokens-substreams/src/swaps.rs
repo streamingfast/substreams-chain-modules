@@ -82,6 +82,9 @@ fn convert(swap: &Swap) -> Result<StockSwap, Skip> {
         quote.symbol.to_string()
     };
 
+    let priced = !price_usd.is_empty();
+    let shares_known = !shares_ui.is_empty();
+
     let meta = swap.meta.as_ref();
     Ok(StockSwap {
         block_num: meta.map(|m| m.block_number).unwrap_or_default(),
@@ -99,10 +102,13 @@ fn convert(swap: &Swap) -> Result<StockSwap, Skip> {
         quote_amount: price::abs_str(quote.adjusted),
         amount_usd,
         price_usd,
+        priced,
+        shares_known,
         sender: swap.sender.clone(),
         origin: meta.map(|m| m.origin.clone()).unwrap_or_default(),
         fee: swap.fee,
         hook_address: swap.hook.as_ref().map(|h| h.address.clone()).unwrap_or_default(),
+        ..Default::default()
     })
 }
 
@@ -172,6 +178,7 @@ mod tests {
         assert_eq!(r.quote_amount, "200");
         assert_eq!(r.amount_usd, "200");
         assert_eq!(r.price_usd, "100");
+        assert!(r.priced && r.shares_known);
         assert_eq!(r.hook_address, "0xhook");
         assert_eq!((r.block_num, r.block_ts, r.log_index), (52_700_001, 1_781_706_600, 3));
         assert_eq!(
@@ -217,6 +224,8 @@ mod tests {
         assert_eq!(r.amount_usd, "");
         assert_eq!(r.price_usd, "");
         assert_eq!(r.shares_ui, "2.000000000000000000");
+        assert!(!r.priced);
+        assert!(r.shares_known);
     }
 
     #[test]

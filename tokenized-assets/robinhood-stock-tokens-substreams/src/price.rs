@@ -41,6 +41,23 @@ pub fn fmt(d: &BigDecimal) -> String {
     out
 }
 
+/// Decimal string for a ClickHouse Decimal128(18) column: truncated to 18
+/// decimals, "0" when empty or unparsable, and "0" past 20 integer digits
+/// (38 - 18) because the sink rejects a value that does not fit rather than
+/// nulling it out.
+pub fn decimal128(s: &str) -> String {
+    let out = parse(s).map(|d| fmt(&d)).unwrap_or_else(|| "0".to_string());
+    if int_digits(&out) > 20 {
+        return "0".to_string();
+    }
+    out
+}
+
+fn int_digits(s: &str) -> usize {
+    let s = s.strip_prefix('-').unwrap_or(s);
+    s.split('.').next().unwrap_or(s).len()
+}
+
 /// amount_usd / shares; None when either is unparsable or shares is zero.
 pub fn price_usd(amount_usd: &str, shares: &str) -> Option<String> {
     let a = parse(amount_usd)?;
@@ -113,5 +130,17 @@ mod tests {
         let huge = dec("100000000000000000000000000");
         assert_eq!(premium_bps(&huge, &dec("1")), Some(i64::MAX));
         assert_eq!(premium_bps(&(dec("0") - huge), &dec("1")), Some(i64::MIN));
+    }
+
+    #[test]
+    fn decimal128_is_always_a_valid_bounded_decimal() {
+        assert_eq!(decimal128(""), "0");
+        assert_eq!(decimal128("abc"), "0");
+        assert_eq!(decimal128("150.500000"), "150.5");
+        assert_eq!(decimal128("-0.25"), "-0.25");
+        assert_eq!(decimal128("1.1234567890123456789999"), "1.123456789012345678");
+        assert_eq!(decimal128("12345678901234567890"), "12345678901234567890"); // 20 integer digits fit
+        assert_eq!(decimal128("123456789012345678901"), "0"); // 21 do not
+        assert_eq!(decimal128("-123456789012345678901"), "0");
     }
 }
