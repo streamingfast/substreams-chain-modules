@@ -69,6 +69,7 @@ members = [
     "staking/rari-vaults-substreams",
     "staking/euler-finance-substreams",
     "payment/superfluid-substreams",
+    "tokenized-assets/robinhood-stock-tokens-substreams",
 ]
 resolver = "2"
 

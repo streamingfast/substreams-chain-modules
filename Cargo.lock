@@ -1742,6 +1742,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "robinhood_stock_tokens_substreams"
+version = "0.1.0"
+dependencies = [
+ "hex-literal 0.4.1",
+ "prost 0.13.5",
+ "prost-types 0.13.5",
+ "substreams",
+ "substreams-database-change",
+ "substreams-ethereum",
+]
+
+[[package]]
 name = "rocket-pool-substreams"
 version = "0.1.0"
 dependencies = [
