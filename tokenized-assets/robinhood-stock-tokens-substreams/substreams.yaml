@@ -1,0 +1,100 @@
+specVersion: v0.1.0
+package:
+  name: robinhood-stock-tokens-substreams
+  version: v0.1.0
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/tokenized-assets/robinhood-stock-tokens-substreams
+  description: >
+    Onchain basis for Robinhood Chain stock tokens: Uniswap V4 stock-token swaps
+    (via uniswap-v4-robinhood by PaulieB14), Chainlink tokenized-equity reference
+    prices, and the implied-vs-reference premium per trade, sunk to ClickHouse.
+    Built with Substreams Skills.
+
+network: robinhood
+
+imports:
+  u4rh: https://spkg.io/PaulieB14/uniswap-v4-robinhood-v0.1.2.spkg
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+  sql: https://github.com/streamingfast/substreams-sink-sql/releases/download/protodefs-v1.0.7/substreams-sink-sql-protodefs-v1.0.7.spkg
+
+protobuf:
+  files:
+    - hood/basis/v1/basis.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - sf/ethereum
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/robinhood_stock_tokens_substreams.wasm
+
+modules:
+  - name: map_stock_swaps
+    kind: map
+    initialBlock: 9070
+    doc: Stock-vs-quote (USDG/WETH/native) swaps as share trades, from u4rh:map_stock_events.
+    inputs:
+      - map: u4rh:map_stock_events
+    output:
+      type: proto:hood.basis.v1.StockSwaps
+
+  - name: map_chainlink_answers
+    kind: map
+    initialBlock: 9070
+    doc: AnswerUpdated rounds from the 35 Chainlink tokenized-equity aggregators.
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    output:
+      type: proto:hood.basis.v1.ChainlinkAnswers
+
+  - name: store_ref_price
+    kind: store
+    initialBlock: 9070
+    updatePolicy: set
+    valueType: string
+    doc: "ref:<ticker> -> <answer_usd>|<updated_at>|<block_ts>, last Chainlink round per ticker."
+    inputs:
+      - map: map_chainlink_answers
+
+  - name: store_session_close
+    kind: store
+    initialBlock: 9070
+    updatePolicy: set
+    valueType: string
+    doc: "close:<ticker> -> <price_usd>|<block_ts>, last priced swap seen during a regular NYSE session."
+    inputs:
+      - map: map_stock_swaps
+
+  - name: map_basis
+    kind: map
+    initialBlock: 9070
+    doc: Implied price vs reference (Chainlink, else session close) per priced stock swap.
+    inputs:
+      - map: map_stock_swaps
+      - store: store_ref_price
+        mode: get
+      - store: store_session_close
+        mode: get
+    output:
+      type: proto:hood.basis.v1.BasisTicks
+
+  - name: db_out
+    kind: map
+    initialBlock: 9070
+    doc: ClickHouse rows for stock_swaps, chainlink_answers and basis_ticks. stock_registry is seeded by schema.clickhouse.sql, not emitted here.
+    inputs:
+      - map: map_stock_swaps
+      - map: map_chainlink_answers
+      - map: map_basis
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
+
+sink:
+  module: db_out
+  type: sf.substreams.sink.sql.v1.Service
+  config:
+    schema: ./schema.clickhouse.sql
+    engine: clickhouse

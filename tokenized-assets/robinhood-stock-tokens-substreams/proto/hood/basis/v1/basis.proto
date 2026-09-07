@@ -1,0 +1,74 @@
+syntax = "proto3";
+package hood.basis.v1;
+
+// One row per Uniswap V4 swap on Robinhood Chain where exactly one leg is a
+// registry stock token and the other is USDG, WETH or native. Derived from
+// uniswap-v4-robinhood's map_stock_events; amounts are already decimal-adjusted
+// there, this only re-frames them as a trade in shares against a quote.
+message StockSwaps {
+  repeated StockSwap swaps = 1;
+  // Pools map_stock_events emitted that this module deliberately drops.
+  uint32 skipped_stock_stock = 2;
+  uint32 skipped_other = 3;
+}
+
+message StockSwap {
+  uint64 block_num  = 1;
+  uint64 block_ts   = 2;   // unix seconds
+  string tx_hash    = 3;
+  uint32 log_index  = 4;
+  string pool_id    = 5;
+  string ticker     = 6;   // registry ticker of the stock leg
+  string token      = 7;   // stock token address, 0x lowercase
+  string side       = 8;   // "buy" = trader received stock, else "sell"
+  string shares_ui  = 9;   // |amountN_ui|, ERC-8056 share count; empty if unknown
+  string shares_raw_adjusted = 10; // |amountN_adjusted|, raw token units / 10^18
+  string quote_symbol = 11;
+  string quote_kind   = 12; // "usdg" | "weth" | "native"
+  string quote_amount = 13; // |quote leg adjusted|
+  string amount_usd   = 14; // empty when upstream could not price the swap
+  string price_usd    = 15; // amount_usd / shares_ui; empty if unpriced or shares_ui == 0
+  string sender       = 16;
+  string origin       = 17;
+  uint32 fee          = 18; // fee actually charged (hook may override)
+  string hook_address = 19;
+}
+
+// Chainlink AnswerUpdated rounds from the tokenized-equity aggregators.
+message ChainlinkAnswers {
+  repeated ChainlinkAnswer answers = 1;
+}
+
+message ChainlinkAnswer {
+  uint64 block_num  = 1;
+  uint64 block_ts   = 2;
+  string tx_hash    = 3;
+  uint32 log_index  = 4;
+  string ticker     = 5;
+  string feed       = 6;   // proxy address
+  string aggregator = 7;   // emitting aggregator address
+  string answer_usd = 8;   // int256 answer scaled by 8 decimals
+  string round_id   = 9;
+  uint64 updated_at = 10;
+}
+
+// Onchain implied price vs reference, one per priced stock swap.
+message BasisTicks {
+  repeated BasisTick ticks = 1;
+}
+
+message BasisTick {
+  uint64 block_num   = 1;
+  uint64 block_ts    = 2;
+  string tx_hash     = 3;
+  uint32 log_index   = 4;
+  string ticker      = 5;
+  string implied_usd = 6;  // = StockSwap.price_usd
+  string ref_usd     = 7;
+  string ref_source  = 8;  // "chainlink" | "session_close" | "none"
+  uint64 ref_ts      = 9;  // feed updated_at, or block_ts of the session close
+  int64  premium_bps = 10; // (implied / ref - 1) * 10000, truncated; 0 when no ref
+  string session     = 11; // "regular" | "extended" | "closed" (NYSE, America/New_York)
+  string amount_usd  = 12;
+  string side        = 13;
+}
