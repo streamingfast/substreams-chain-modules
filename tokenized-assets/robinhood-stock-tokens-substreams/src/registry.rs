@@ -1,3 +1,5 @@
+// Baked registry snapshot. Some fields are only read by the schema generator and tests.
+#![allow(dead_code)]
 //! Static Robinhood stock-token registry and Chainlink feed map, baked from
 //! data/*.tsv by build.rs. Addresses are 0x-prefixed lowercase.
 
