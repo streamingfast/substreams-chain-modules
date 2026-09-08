@@ -70,6 +70,7 @@ members = [
     "staking/euler-finance-substreams",
     "payment/superfluid-substreams",
     "tokenized-assets/robinhood-stock-tokens-substreams",
+    "program-metadata/solana-idl-history-substreams",
 ]
 resolver = "2"
 
@@ -81,16 +82,20 @@ repository = "https://github.com/streamingfast/substreams-chain-modules"
 
 [workspace.dependencies]
 anyhow = "1"
+bs58 = "0.4"
 ethabi = "18"
+flate2 = { version = "1.0", default-features = false, features = ["rust_backend"] }
 hex = "0.4"
 hex-literal = "0.4"
 num-bigint = "0.4"
 prost = "0.13"
 prost-types = "0.13"
+serde_json = "1.0"
 substreams = "0.7"
 substreams-database-change = "4"
 substreams-ethereum = "0.11"
 pretty_assertions = "1"
+sha2 = "0.10"
 
 [profile.release]
 lto = true

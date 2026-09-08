@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package sf.solana.idl.v1;
+
+// Hosted sink deployments always run `substreams-sink-sql from-proto`, which builds
+// the table straight from these annotations — there is no schema.sql in that path.
+import "sf/substreams/sink/sql/schema/v1/schema.proto";
+
+option go_package = "github.com/streamingfast/substreams-chain-modules/program-metadata/solana-idl-history-substreams/pb/sf/solana/idl/v1;pbidl";
+
+// Which on-chain mechanism stored the IDL.
+enum Source {
+  SOURCE_UNSPECIFIED = 0;
+  // Legacy Anchor account at createWithSeed(base, "anchor:idl", program_id).
+  // The account is owned by the program itself, so owner == program_id.
+  SOURCE_LEGACY = 1;
+  // SPL Program Metadata (ProgM6JCCvbYkfKqJYHePx4xxSUSqJp7rh8Lyv7nk7S),
+  // integrated by Anchor 1.0.0. Carries the program pubkey in its header.
+  SOURCE_PROGRAM_METADATA = 2;
+}
+
+// Where the payload actually lives. Program Metadata can store a pointer
+// instead of the IDL itself, in which case there are no bytes on chain.
+enum DataSource {
+  DATA_SOURCE_DIRECT = 0;
+  DATA_SOURCE_URL = 1;
+  DATA_SOURCE_EXTERNAL = 2;
+}
+
+// One observed write to an IDL-bearing account.
+message IdlAccountWrite {
+  option (schema.table) = {
+    name: "idl_write"
+  };
+
+  // "<account_address>:<slot>" — the natural key is (account_address, slot), but
+  // substreams-sink-sql from-proto rejects more than one primary-key field
+  // ("multiple field mark has primary keys are not supported"), so the pair is
+  // encoded into one column. Both parts remain queryable as their own columns.
+  //
+  // Keyed on account_address rather than program_id because one program can write a
+  // legacy account, a metadata account and an upload buffer in the same slot.
+  string id = 17 [(schema.field) = { primary_key: true }];
+
+  // Base58 program the IDL describes. Legacy: the account owner. Metadata: header.program.
+  string program_id = 1;
+  // Base58 address of the account that was written.
+  string account_address = 2;
+  uint64 slot = 3;
+  // Block timestamp, unix seconds. Needed for "changes between two timestamps".
+  int64 block_time = 4;
+  Source source = 5;
+
+  // True when the source marked the account deleted. A zeroed account cannot appear
+  // here at all: recognition is content-based, so once the discriminator is gone the
+  // account is no longer matched.
+  bool deleted = 6;
+  // Base58 update authority, empty when none is set.
+  string authority = 7;
+
+  // Payload exactly as stored on chain, before decompression, kept so a future
+  // format or compression change stays recoverable without a re-index.
+  //
+  // Only carried on completed writes. Anchor uploads an IDL in chunks and each
+  // chunk holds a growing prefix of the same document, so persisting every chunk
+  // stores the same bytes many times over — measured at roughly 13x the useful
+  // payload. Chunks keep their row and their payload_len; see payload_omitted.
+  bytes payload_raw = 8;
+  // Byte length the account actually held, recorded even when the bytes are not
+  // stored, so chunk progress stays visible.
+  uint32 payload_len = 15;
+  // True when the account held bytes that were deliberately not stored. The row is
+  // still a faithful record that the write happened; the bytes are a prefix of the
+  // completed document, and the live account can be re-read over RPC if an upload
+  // never completed.
+  bool payload_omitted = 16;
+  // Decompressed IDL JSON (UTF-8), populated only when the document parses. Anchor
+  // uploads IDLs in chunks and a mid-upload account decompresses to a truncated
+  // document that still carries a "version" field, so anything that fails to parse is
+  // withheld here and reported through decode_error instead.
+  //
+  // bytes, not string: substreams-sink-sql maps every proto string to VARCHAR(255),
+  // and Postgres errors rather than truncates on overflow — a real IDL runs to
+  // hundreds of kilobytes and would crash the sink on the first complete document.
+  // bytes maps to unbounded BYTEA. Hosted deployments cannot pass --bytes-encoding,
+  // so what lands in the column is the proto-JSON base64 of the document wrapped in
+  // single quotes, not the document itself — decode it, do not just convert_from it.
+  bytes idl_json = 9;
+  // Set when idl_json could not be produced, so failures are visible rather than silent.
+  string decode_error = 10;
+  // True when this write held a payload that parsed as a whole JSON object. Only
+  // complete writes are real versions; the rest are upload chunks. Note this proves
+  // the document is whole, not that its contents are a well-formed Anchor IDL.
+  bool complete = 13;
+  // True when the account held no payload at all — the cleared state Anchor leaves
+  // between allocating an IDL account and writing to it. Distinguishes "nothing here
+  // yet" from "we failed to decode".
+  bool empty_payload = 14;
+
+  // Semver read out of the IDL JSON (top-level "version", or "metadata.version"
+  // on Anchor 0.30+). Empty when absent or unparseable.
+  string version = 11;
+  // Major component of version, for "give me the current IDL at major N".
+  // -1 when unknown, so 0 stays a legitimate major. Nothing validates the version
+  // string, so a document declaring "-1.2.3" also lands here.
+  int64 version_major = 12;
+
+  // Program Metadata header fields. Only seed, encoding and format are unset for
+  // legacy writes: compression is always 2 there (legacy IDLs are zlib) and
+  // data_source is DATA_SOURCE_DIRECT, which is the zero value rather than "absent".
+  // Always "idl". Program Metadata is a general-purpose store and `security` is
+  // another standard seed, but only `idl` accounts are indexed here.
+  string seed = 20;
+  // Recorded, not applied: the decoder handles compression but assumes the payload
+  // is UTF-8 (the client default). Anything else surfaces as a decode_error.
+  uint32 encoding = 21;
+  uint32 compression = 22;
+  uint32 format = 23;
+  DataSource data_source = 24;
+  // Populated when data_source is URL or EXTERNAL.
+  string external_url = 25;
+  string external_account = 26;
+  // header.canonical — whether this is the canonical metadata account.
+  bool canonical = 27;
+
+  // Always false: this module never computes it, so the value carries no signal and
+  // must not be read as "this address was checked and is not derivable".
+  //
+  // It matters because nothing authenticates an IDL account. create_with_seed lets
+  // any caller name any program as owner, so a forged account can be attributed to a
+  // program its author does not control, and legacy buffer accounts legitimately sit
+  // at a non-PDA address while an upload is in flight. Telling those apart means
+  // deriving find_program_address([], program), whose off-curve search is not yet
+  // implemented here. Until it is, a consumer that cares must compare the address
+  // against IdlAccount::address(program_id) itself.
+  bool address_is_derivable = 28;
+}
+
+message IdlAccountWrites {
+  repeated IdlAccountWrite writes = 1;
+}
