@@ -43,7 +43,7 @@ cargo build --target wasm32-unknown-unknown --release -p robinhood_stock_tokens_
 cargo test -p robinhood_stock_tokens_substreams                                               # from repo root
 
 substreams pack                                          # from the package dir
-substreams info ./robinhood-stock-tokens-substreams-v0.2.1.spkg
+substreams info ./robinhood-stock-tokens-substreams-v0.3.0.spkg
 ```
 
 `proto/sf/substreams/sink/sql/schema/v1/schema.proto` is vendored from
@@ -58,13 +58,13 @@ sink reads to create the tables. `substreams protogen` also emits
 ```bash
 substreams auth   # once; needs a Substreams API key
 
-substreams run ./robinhood-stock-tokens-substreams-v0.2.1.spkg map_basis \
+substreams run ./robinhood-stock-tokens-substreams-v0.3.0.spkg map_basis \
   -e robinhood.substreams.pinax.network:443 -s 52700000 -t +5000
 
-substreams run ./robinhood-stock-tokens-substreams-v0.2.1.spkg map_stock_swaps \
+substreams run ./robinhood-stock-tokens-substreams-v0.3.0.spkg map_stock_swaps \
   -e robinhood.substreams.pinax.network:443 -s 52700000 -t +5000 -o jsonl
 
-substreams run ./robinhood-stock-tokens-substreams-v0.2.1.spkg map_chainlink_answers \
+substreams run ./robinhood-stock-tokens-substreams-v0.3.0.spkg map_chainlink_answers \
   -e robinhood.substreams.pinax.network:443 -s 52700000 -t +5000 -o jsonl
 ```
 
@@ -77,7 +77,7 @@ from the `Rows` message and creates them itself on first run:
 
 ```bash
 substreams-sink-sql from-proto "clickhouse://default:@localhost:9000/default" \
-  ./robinhood-stock-tokens-substreams-v0.2.1.spkg map_rows \
+  ./robinhood-stock-tokens-substreams-v0.3.0.spkg map_rows \
   -e robinhood.substreams.pinax.network:443 --start-block 9070
 ```
 
@@ -187,10 +187,10 @@ Sink notes:
 
 ## Caveats
 
-- The sink creates tables with `CREATE TABLE IF NOT EXISTS` and never alters them, so a `stock_swaps` table created by v0.2.0 will not get the `usable` column and v0.2.1 inserts fail against it. Either start from a fresh database or add the column by hand before pointing v0.2.1 at it:
+- The sink creates tables with `CREATE TABLE IF NOT EXISTS` and never alters them, so a `stock_swaps` table created by v0.2.0 will not get the `usable` column and v0.3.0 inserts fail against it. Either start from a fresh database or add the column by hand before pointing v0.3.0 at it:
 
   ```sql
-  ALTER TABLE hood.stock_swaps ADD COLUMN usable Bool DEFAULT false
+  ALTER TABLE stock_swaps ADD COLUMN usable Bool DEFAULT false
   ```
 
   Rows written by v0.2.0 keep `usable = false` after the ALTER; only rows the sink re-inserts from a cursor rewind get the real verdict.

@@ -135,7 +135,7 @@ pub struct ChainlinkAnswer {
     #[prost(uint64, tag="10")]
     pub updated_at: u64,
 }
-/// Onchain implied price vs reference, one per priced stock swap.
+/// Onchain implied price vs reference, one per usable stock swap.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BasisTicks {

@@ -87,7 +87,7 @@ message ChainlinkAnswer {
   uint64 updated_at = 10;
 }
 
-// Onchain implied price vs reference, one per priced stock swap.
+// Onchain implied price vs reference, one per usable stock swap.
 message BasisTicks {
   repeated BasisTick ticks = 1;
 }
