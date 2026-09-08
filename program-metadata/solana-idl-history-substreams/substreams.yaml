@@ -1,0 +1,65 @@
+specVersion: v0.1.0
+package:
+  name: solana-idl-history-substreams
+  version: v0.2.0
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/program-metadata/solana-idl-history-substreams
+  description: >
+    Chain-wide index of Anchor IDL account writes on Solana, covering both the
+    legacy "anchor:idl" accounts and SPL Program Metadata. Takes no parameters:
+    one deployment indexes every program.
+
+network: solana-accounts
+
+protobuf:
+  files:
+    - sf/solana/idl/v1/idl.proto
+    # The block source type the modules consume. Listed so `substreams protogen`
+    # emits its bindings; the modules read Account fields directly.
+    - sf/solana/type/v1/account.proto
+    # Declaring the import is not enough: the descriptor has to travel inside the
+    # package or any client decoding the output fails to resolve it.
+    - sf/substreams/sink/sql/schema/v1/schema.proto
+  importPaths:
+    - ./proto
+  # Rust codegen only. idl.proto imports the sink schema, so buf still generates
+  # src/pb/schema.rs for it (--include-imports); that is expected.
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/solana_idl_history_substreams.wasm
+
+modules:
+  - name: index_idl_accounts
+    kind: blockIndex
+    # The accounts stream is derived and does not reach genesis; it currently
+    # starts here. Earlier IDLs need a transaction-stream replay instead.
+    initialBlock: 327404500
+    inputs:
+      - source: sf.solana.type.v1.AccountBlock
+    output:
+      type: proto:sf.substreams.index.v1.Keys
+    doc: |
+      Emits the key `idl` for blocks touching at least one IDL account, so a
+      chain-wide scan reads only the rare blocks that matter.
+
+  - name: map_idl_accounts
+    kind: map
+    initialBlock: 327404500
+    blockFilter:
+      module: index_idl_accounts
+      query:
+        string: idl
+    inputs:
+      - source: sf.solana.type.v1.AccountBlock
+    output:
+      type: proto:sf.solana.idl.v1.IdlAccountWrites
+    doc: |
+      Decodes each IDL write: program, authority, version, and the raw payload.
+      Reads the account source directly rather than the `filtered_accounts`
+      foundational module, which can only match `account:` and `owner:` exactly —
+      legacy IDL accounts are owned by the program they describe, so no owner
+      filter can enumerate them chain-wide.

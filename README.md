@@ -14,6 +14,7 @@ This repository contains [Substreams](https://substreams.streamingfast.io) modul
 | Stablecoins | Stablecoin transfers, mints, burns, and supply tracking |
 | Prediction Markets | Market creation, trading, and resolution events |
 | Tokenized Assets | Real-world asset tokenization events and transfers |
+| Program Metadata | Onchain program interface descriptors and their version history |
 
 ## Prerequisites
 
