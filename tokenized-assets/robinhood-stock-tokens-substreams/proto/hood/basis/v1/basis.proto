@@ -53,6 +53,7 @@ message StockSwap {
   string price_usd    = 15 [(schema.field) = { convertTo: { decimal128 { scale: 18 } } }]; // amount_usd / shares_ui
   bool   priced       = 22; // upstream valued the swap: amount_usd is real. price_usd also needs shares_known.
   bool   shares_known = 23; // false when shares_ui was not populated upstream
+  bool   usable       = 24; // priced, shares_known, and notional / price inside the quality floors; only these feed store_session_close and basis_ticks
   string sender       = 16;
   string origin       = 17;
   uint32 fee          = 18; // fee actually charged (hook may override)
@@ -86,7 +87,7 @@ message ChainlinkAnswer {
   uint64 updated_at = 10;
 }
 
-// Onchain implied price vs reference, one per priced stock swap.
+// Onchain implied price vs reference, one per usable stock swap.
 message BasisTicks {
   repeated BasisTick ticks = 1;
 }

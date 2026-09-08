@@ -3,6 +3,7 @@
 
 use crate::pb::hood::basis::v1::{BasisTick, StockSwap};
 use crate::price;
+use crate::quality;
 use crate::session;
 
 pub const REF_PREFIX: &str = "ref:";
@@ -41,6 +42,9 @@ fn parse_stored(v: &str, source: &'static str) -> Option<Reference> {
 }
 
 pub fn tick(swap: &StockSwap, ref_value: Option<&str>, close_value: Option<&str>) -> Option<BasisTick> {
+    if !quality::usable(swap) {
+        return None;
+    }
     let implied = price::parse(&swap.price_usd)?;
     let reference = ref_value
         .and_then(|v| parse_stored(v, "chainlink"))
@@ -88,6 +92,8 @@ mod tests {
             price_usd: price_usd.into(),
             amount_usd: "500".into(),
             side: "buy".into(),
+            priced: true,
+            shares_known: true,
             ..Default::default()
         }
     }
@@ -123,6 +129,19 @@ mod tests {
     #[test]
     fn unpriced_swap_yields_no_tick() {
         assert!(tick(&swap(""), Some("100|1"), None).is_none());
+        let mut s = swap("99");
+        s.priced = false;
+        assert!(tick(&s, Some("100|1"), None).is_none());
+    }
+
+    #[test]
+    fn dust_and_mispriced_swaps_yield_no_tick() {
+        let mut dust = swap("0.64");
+        dust.amount_usd = "0.01".into();
+        assert!(tick(&dust, Some("100|1"), None).is_none());
+        let mut mispriced = swap("4600000000000");
+        mispriced.amount_usd = "50000000000".into();
+        assert!(tick(&mispriced, Some("100|1"), None).is_none());
     }
 
     #[test]

@@ -1,7 +1,7 @@
 specVersion: v0.1.0
 package:
   name: robinhood-stock-tokens-substreams
-  version: v0.2.0
+  version: v0.3.0
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/tokenized-assets/robinhood-stock-tokens-substreams
   description: >
     Onchain basis for Robinhood Chain stock tokens: Uniswap V4 stock-token swaps
@@ -68,14 +68,14 @@ modules:
     initialBlock: 9070
     updatePolicy: set
     valueType: string
-    doc: "close:<ticker> -> <price_usd>|<block_ts>, last priced swap seen during a regular NYSE session."
+    doc: "close:<ticker> -> <price_usd>|<block_ts>, last usable swap (see StockSwap.usable) seen during a regular NYSE session."
     inputs:
       - map: map_stock_swaps
 
   - name: map_basis
     kind: map
     initialBlock: 9070
-    doc: Implied price vs reference (Chainlink, else session close) per priced stock swap.
+    doc: Implied price vs reference (Chainlink, else session close) per usable stock swap.
     inputs:
       - map: map_stock_swaps
       - store: store_ref_price

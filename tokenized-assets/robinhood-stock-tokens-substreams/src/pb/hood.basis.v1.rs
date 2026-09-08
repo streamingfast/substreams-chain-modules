@@ -83,6 +83,9 @@ pub struct StockSwap {
     /// false when shares_ui was not populated upstream
     #[prost(bool, tag="23")]
     pub shares_known: bool,
+    /// priced, shares_known, and notional / price inside the quality floors; only these feed store_session_close and basis_ticks
+    #[prost(bool, tag="24")]
+    pub usable: bool,
     #[prost(string, tag="16")]
     pub sender: ::prost::alloc::string::String,
     #[prost(string, tag="17")]
@@ -132,7 +135,7 @@ pub struct ChainlinkAnswer {
     #[prost(uint64, tag="10")]
     pub updated_at: u64,
 }
-/// Onchain implied price vs reference, one per priced stock swap.
+/// Onchain implied price vs reference, one per usable stock swap.
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct BasisTicks {

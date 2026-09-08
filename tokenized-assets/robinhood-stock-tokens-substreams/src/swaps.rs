@@ -6,6 +6,7 @@ use substreams::scalar::BigInt;
 use crate::pb::hood::basis::v1::{StockSwap, StockSwaps};
 use crate::pb::uniswap::v4::v1::{Events, Swap};
 use crate::price;
+use crate::quality;
 use crate::registry;
 
 pub fn build(events: Events) -> StockSwaps {
@@ -86,7 +87,7 @@ fn convert(swap: &Swap) -> Result<StockSwap, Skip> {
     let shares_known = !shares_ui.is_empty();
 
     let meta = swap.meta.as_ref();
-    Ok(StockSwap {
+    let mut row = StockSwap {
         block_num: meta.map(|m| m.block_number).unwrap_or_default(),
         block_ts: meta.map(|m| m.block_timestamp).unwrap_or_default(),
         tx_hash: meta.map(|m| m.tx_hash.clone()).unwrap_or_default(),
@@ -109,7 +110,9 @@ fn convert(swap: &Swap) -> Result<StockSwap, Skip> {
         fee: swap.fee,
         hook_address: swap.hook.as_ref().map(|h| h.address.clone()).unwrap_or_default(),
         ..Default::default()
-    })
+    };
+    row.usable = quality::usable(&row);
+    Ok(row)
 }
 
 #[cfg(test)]
@@ -178,7 +181,7 @@ mod tests {
         assert_eq!(r.quote_amount, "200");
         assert_eq!(r.amount_usd, "200");
         assert_eq!(r.price_usd, "100");
-        assert!(r.priced && r.shares_known);
+        assert!(r.priced && r.shares_known && r.usable);
         assert_eq!(r.hook_address, "0xhook");
         assert_eq!((r.block_num, r.block_ts, r.log_index), (52_700_001, 1_781_706_600, 3));
         assert_eq!(
@@ -226,6 +229,7 @@ mod tests {
         assert_eq!(r.shares_ui, "2.000000000000000000");
         assert!(!r.priced);
         assert!(r.shares_known);
+        assert!(!r.usable);
     }
 
     #[test]
