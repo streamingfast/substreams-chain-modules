@@ -21,8 +21,8 @@ share counts, and Chainlink tokenized-equity feeds for reference prices.
 | `map_stock_swaps` | map | `u4rh:map_stock_events` | `hood.basis.v1.StockSwaps` — one row per swap where one leg is a registry stock and the other is USDG, WETH or native; side, share count, quote amount, USD notional, implied price. Stock/stock pools are counted in `skipped_stock_stock`, anything else in `skipped_other`. |
 | `map_chainlink_answers` | map | `sf.ethereum.type.v2.Block` | `hood.basis.v1.ChainlinkAnswers` — `AnswerUpdated` rounds from the 35 tokenized-equity aggregators in `data/feed-token-map.tsv`, answer scaled to 8 decimals. |
 | `store_ref_price` | store (set, string) | `map_chainlink_answers` | `ref:<ticker>` → `<answer_usd>\|<updated_at>` |
-| `store_session_close` | store (set, string) | `map_stock_swaps` | `close:<ticker>` → `<price_usd>\|<block_ts>`, last priced swap during a regular NYSE session (weekday 09:30–16:00 America/New_York, exchange holidays excluded; a static holiday table through 2027, with early closes at 13:00 on the days the exchange shortens the session). |
-| `map_basis` | map | `map_stock_swaps`, both stores | `hood.basis.v1.BasisTicks` — per priced swap: implied vs reference (`chainlink`, else `session_close`, else `none`), `premium_bps`, and the session (`regular` / `extended` / `closed`). |
+| `store_session_close` | store (set, string) | `map_stock_swaps` | `close:<ticker>` → `<price_usd>\|<block_ts>`, last usable swap (see `usable` below) during a regular NYSE session (weekday 09:30–16:00 America/New_York, exchange holidays excluded; a static holiday table through 2027, with early closes at 13:00 on the days the exchange shortens the session). |
+| `map_basis` | map | `map_stock_swaps`, both stores | `hood.basis.v1.BasisTicks` — per usable swap: implied vs reference (`chainlink`, else `session_close`, else `none`), `premium_bps`, and the session (`regular` / `extended` / `closed`). |
 | `map_rows` | map | the three maps | `hood.basis.v1.Rows` — the sink module. Same rows as the three maps with `id` and `block_time` filled and every decimal column normalised for `Decimal128(18)`; `substreams-sink-sql from-proto` turns its `stock_swaps`, `chainlink_answers` and `basis_ticks` fields into the tables of the same name. |
 
 Every module starts at block 9070, the PoolManager deployment block. The
@@ -43,7 +43,7 @@ cargo build --target wasm32-unknown-unknown --release -p robinhood_stock_tokens_
 cargo test -p robinhood_stock_tokens_substreams                                               # from repo root
 
 substreams pack                                          # from the package dir
-substreams info ./robinhood-stock-tokens-substreams-v0.2.0.spkg
+substreams info ./robinhood-stock-tokens-substreams-v0.2.1.spkg
 ```
 
 `proto/sf/substreams/sink/sql/schema/v1/schema.proto` is vendored from
@@ -58,13 +58,13 @@ sink reads to create the tables. `substreams protogen` also emits
 ```bash
 substreams auth   # once; needs a Substreams API key
 
-substreams run ./robinhood-stock-tokens-substreams-v0.2.0.spkg map_basis \
+substreams run ./robinhood-stock-tokens-substreams-v0.2.1.spkg map_basis \
   -e robinhood.substreams.pinax.network:443 -s 52700000 -t +5000
 
-substreams run ./robinhood-stock-tokens-substreams-v0.2.0.spkg map_stock_swaps \
+substreams run ./robinhood-stock-tokens-substreams-v0.2.1.spkg map_stock_swaps \
   -e robinhood.substreams.pinax.network:443 -s 52700000 -t +5000 -o jsonl
 
-substreams run ./robinhood-stock-tokens-substreams-v0.2.0.spkg map_chainlink_answers \
+substreams run ./robinhood-stock-tokens-substreams-v0.2.1.spkg map_chainlink_answers \
   -e robinhood.substreams.pinax.network:443 -s 52700000 -t +5000 -o jsonl
 ```
 
@@ -77,7 +77,7 @@ from the `Rows` message and creates them itself on first run:
 
 ```bash
 substreams-sink-sql from-proto "clickhouse://default:@localhost:9000/default" \
-  ./robinhood-stock-tokens-substreams-v0.2.0.spkg map_rows \
+  ./robinhood-stock-tokens-substreams-v0.2.1.spkg map_rows \
   -e robinhood.substreams.pinax.network:443 --start-block 9070
 ```
 
@@ -104,6 +104,7 @@ as ClickHouse creates them:
 | `quote_symbol`, `quote_kind` | `String` |
 | `quote_amount`, `amount_usd`, `price_usd` | `Decimal(38, 18)` |
 | `priced`, `shares_known` | `Bool` |
+| `usable` | `Bool` |
 | `sender`, `origin` | `String` |
 | `fee` | `UInt32` |
 | `hook_address` | `String` |
@@ -159,6 +160,15 @@ Sink notes:
   nulling it). `priced` / `shares_known` say whether `amount_usd` / `price_usd`
   and `shares_ui` were real or filled in; `ref_usd` is `0` when `ref_source` is
   `none`.
+- Quality floors: a swap is `usable` only when `priced` and `shares_known`
+  and `amount_usd` is within [5, 10000000] USD and `price_usd` is within
+  [0.01, 100000] USD (`src/quality.rs`). Dust swaps (a $0.01 notional implies
+  anything from $0.64 to $294 for the same ticker within minutes) and pools
+  where upstream reports a mispriced notional (a COST/USDG pool valued at
+  ~5e10 USD for 0.011 shares) fail the floors. Unusable swaps are still rows in
+  `stock_swaps`, but they never update `store_session_close` and produce no
+  `basis_ticks` row, so a reference price is never set by one. Filter on
+  `usable` instead of re-deriving the rule.
 - Cursor and schema hash are files next to the sink process
   (`cursor.txt`, `<schema>_schema_hash.txt`; `--clickhouse-cursor-file-path`,
   `--clickhouse-sink-info-folder`), not rows in ClickHouse. Keep them with the
@@ -172,10 +182,18 @@ Sink notes:
 - `price_usd`, `implied_usd`, `answer_usd` are truncated to 18 decimals with trailing zeros removed.
 - `side` is from the trader's point of view: `buy` when the trader receives stock.
 - `priced` means upstream valued the swap, so `amount_usd` is real. `price_usd` additionally needs `shares_known`; when shares are unknown it is `0` even on a priced swap. Read the flags, not the zeros.
+- `usable` is `priced && shares_known` plus the notional and price floors; it is the only flag `basis_ticks` and the session-close reference honour.
 - `map_basis` reads the stores with `get_first`, so every swap in a block is compared against the reference as it stood at the start of the block, never against a value written earlier in that same block.
 
 ## Caveats
 
+- The sink creates tables with `CREATE TABLE IF NOT EXISTS` and never alters them, so a `stock_swaps` table created by v0.2.0 will not get the `usable` column and v0.2.1 inserts fail against it. Either start from a fresh database or add the column by hand before pointing v0.2.1 at it:
+
+  ```sql
+  ALTER TABLE hood.stock_swaps ADD COLUMN usable Bool DEFAULT false
+  ```
+
+  Rows written by v0.2.0 keep `usable = false` after the ALTER; only rows the sink re-inserts from a cursor rewind get the real verdict.
 - Chainlink aggregators are matched to a ticker by aggregator address from a 2026-09-05 snapshot of `data/feed-token-map.tsv`. If Chainlink rotates the aggregator behind a feed, that ticker's reference price stops updating; watch for `ref_ts` no longer advancing as the symptom.
 - The NYSE holiday table in `session.rs` only covers 2026-2027 and needs extending before it runs out; past that it will misclassify holidays as regular trading sessions.
 - Share counts and `premium_bps` for the 11 tickers with a non-1.0 ERC-8056 multiplier depend on the multiplier baked in from the imported `uniswap-v4-robinhood` package's own snapshot; if that package's multipliers change upstream, this package's values drift until it re-imports.

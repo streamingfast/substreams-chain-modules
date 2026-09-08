@@ -2,6 +2,7 @@ mod basis;
 mod chainlink;
 mod pb;
 mod price;
+mod quality;
 mod registry;
 mod rows;
 mod session;
@@ -48,13 +49,7 @@ fn store_ref_price(answers: ChainlinkAnswers, store: StoreSetString) {
 #[substreams::handlers::store]
 fn store_session_close(swaps: StockSwaps, store: StoreSetString) {
     for s in &swaps.swaps {
-        if s.ticker.is_empty() || s.price_usd.is_empty() || session::classify(s.block_ts) != session::Session::Regular {
-            continue;
-        }
-        let Some(price_usd) = price::parse(&s.price_usd) else {
-            continue;
-        };
-        if price_usd <= BigDecimal::zero() {
+        if s.ticker.is_empty() || !quality::usable(s) || session::classify(s.block_ts) != session::Session::Regular {
             continue;
         }
         store.set(
