@@ -6,7 +6,7 @@ mod pb;
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::stake_link_liquid::types::v1::{
@@ -21,36 +21,46 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
-    block.header.timestamp.seconds as u64
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
+    block
+        .header
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for log in trx.receipt().logs() {
-            let id = format!("{}-{}", tx_hash, log.index());
+        let Some(receipt) = trx.receipt()? else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let log = log?;
+            let id = format!("{}-{}", tx_hash, log.index);
 
-            if log.address() == STLINK.as_slice() {
-                if let Some(ev) = abi::stlink::events::Transfer::match_and_decode(log) {
+            if log.address == STLINK.as_slice() {
+                if let Some(ev) = abi::stlink::events::Transfer::match_and_decode(&log) {
                     events.stlink_transfers.push(StlinkTransfer {
                         id: id.clone(),
                         from: fmt_addr(&ev.from),
                         to: fmt_addr(&ev.to),
                         value: ev.value.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) = abi::stlink::events::UpdateStrategyRewards::match_and_decode(log) {
+                if let Some(ev) = abi::stlink::events::UpdateStrategyRewards::match_and_decode(&log) {
                     events
                         .stlink_update_strategy_rewardss
                         .push(StlinkUpdateStrategyRewards {
@@ -60,7 +70,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                             rewards_amount: ev.rewards_amount.to_string(),
                             total_fees: ev.total_fees.to_string(),
                             tx_hash: tx_hash.clone(),
-                            log_index: log.index() as u64,
+                            log_index: log.index as u64,
                             block_num: block.number,
                             timestamp,
                         });
@@ -68,51 +78,51 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address() == PRIORITY_POOL.as_slice() {
-                if let Some(ev) = abi::priority_pool::events::Deposit::match_and_decode(log) {
+            if log.address == PRIORITY_POOL.as_slice() {
+                if let Some(ev) = abi::priority_pool::events::Deposit::match_and_decode(&log) {
                     events.priority_pool_deposits.push(PriorityPoolDeposit {
                         id: id.clone(),
                         account: fmt_addr(&ev.account),
                         pool_amount: ev.pool_amount.to_string(),
                         queue_amount: ev.queue_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) = abi::priority_pool::events::DepositTokens::match_and_decode(log) {
+                if let Some(ev) = abi::priority_pool::events::DepositTokens::match_and_decode(&log) {
                     events.priority_pool_deposit_tokenss.push(PriorityPoolDepositTokens {
                         id: id.clone(),
                         unused_tokens_amount: ev.unused_tokens_amount.to_string(),
                         queued_tokens_amount: ev.queued_tokens_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) = abi::priority_pool::events::UnqueueTokens::match_and_decode(log) {
+                if let Some(ev) = abi::priority_pool::events::UnqueueTokens::match_and_decode(&log) {
                     events.priority_pool_unqueue_tokenss.push(PriorityPoolUnqueueTokens {
                         id: id.clone(),
                         account: fmt_addr(&ev.account),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) = abi::priority_pool::events::Withdraw::match_and_decode(log) {
+                if let Some(ev) = abi::priority_pool::events::Withdraw::match_and_decode(&log) {
                     events.priority_pool_withdraws.push(PriorityPoolWithdraw {
                         id: id.clone(),
                         account: fmt_addr(&ev.account),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });

@@ -7,7 +7,7 @@ use substreams::errors::Error;
 use substreams::store::{StoreGet, StoreGetString, StoreNew, StoreSetIfNotExists, StoreSetIfNotExistsString};
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::chainlink_staking::types::v1::{Events, RewardUpdate, RewardVaultSet, StakeEvent, StakeEventV1};
@@ -19,8 +19,14 @@ const OPERATOR_STAKING_POOL: [u8; 20] = hex_literal::hex!("a1d76a7ca72128541e9fc
 // Legacy Staking V1 — deployed block 16083969
 const STAKING_V1: [u8; 20] = hex_literal::hex!("3feb1e09b4bb0e7f0387cee092a52e85797ab889");
 
-fn block_timestamp(block: &Block) -> u64 {
-    block.header.timestamp.seconds as u64
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
+    block
+        .header
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 fn pool_name(addr: &[u8; 20]) -> &'static str {
@@ -32,20 +38,21 @@ fn pool_name(addr: &[u8; 20]) -> &'static str {
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls()? {
+            let log = &lc.log;
             let addr = &log.address;
 
             if addr == &COMMUNITY_STAKING_POOL || addr == &OPERATOR_STAKING_POOL {
-                let pool = pool_name(addr.as_slice().try_into().unwrap_or(&[0u8; 20]));
+                let pool = pool_name((*addr).try_into().unwrap_or(&[0u8; 20]));
 
-                if let Some(ev) = abi::staking_pool::events::Staked::match_and_decode(log) {
+                if let Some(ev) = abi::staking_pool::events::Staked::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.stake_events.push(StakeEvent {
                         id,
@@ -63,7 +70,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::staking_pool::events::Unstaked::match_and_decode(log) {
+                if let Some(ev) = abi::staking_pool::events::Unstaked::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.stake_events.push(StakeEvent {
                         id,
@@ -81,7 +88,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::staking_pool::events::RewardVaultSet::match_and_decode(log) {
+                if let Some(ev) = abi::staking_pool::events::RewardVaultSet::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.reward_vault_sets.push(RewardVaultSet {
                         id,
@@ -98,7 +105,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if addr == &STAKING_V1 {
-                if let Some(ev) = abi::staking_v1::events::Staked::match_and_decode(log) {
+                if let Some(ev) = abi::staking_v1::events::Staked::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.stake_events_v1.push(StakeEventV1 {
                         id,
@@ -117,7 +124,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::staking_v1::events::Unstaked::match_and_decode(log) {
+                if let Some(ev) = abi::staking_v1::events::Unstaked::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.stake_events_v1.push(StakeEventV1 {
                         id,
@@ -149,14 +156,15 @@ pub fn store_reward_vaults(events: Events, store: StoreSetIfNotExistsString) {
 }
 
 #[substreams::handlers::map]
-pub fn map_reward_vault_events(block: Block, store: StoreGetString) -> Result<Events, Error> {
+pub fn map_reward_vault_events(block: &BlockLazyView<'_>, store: StoreGetString) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls()? {
+            let log = &lc.log;
             let vault_addr = format!("0x{}", hex::encode(&log.address));
 
             if store.get_last(&vault_addr).is_none() {
@@ -165,7 +173,7 @@ pub fn map_reward_vault_events(block: Block, store: StoreGetString) -> Result<Ev
 
             let pool_type = store.get_last(&vault_addr).unwrap_or_default();
 
-            if let Some(ev) = abi::reward_vault::events::CommunityPoolRewardUpdated::match_and_decode(log) {
+            if let Some(ev) = abi::reward_vault::events::CommunityPoolRewardUpdated::match_and_decode(&log) {
                 let id = format!("{}-{}", tx_hash, log.index);
                 events.reward_updates.push(RewardUpdate {
                     id,
@@ -180,7 +188,7 @@ pub fn map_reward_vault_events(block: Block, store: StoreGetString) -> Result<Ev
                 continue;
             }
 
-            if let Some(ev) = abi::reward_vault::events::OperatorPoolRewardUpdated::match_and_decode(log) {
+            if let Some(ev) = abi::reward_vault::events::OperatorPoolRewardUpdated::match_and_decode(&log) {
                 let id = format!("{}-{}", tx_hash, log.index);
                 events.reward_updates.push(RewardUpdate {
                     id,

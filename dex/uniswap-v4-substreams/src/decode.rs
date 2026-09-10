@@ -68,22 +68,32 @@ fn bytes32_hex(b: &[u8]) -> String {
     hex::encode(b)
 }
 
-pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
+pub fn decode_block(config: &Config, blk: &eth::BlockLazyView<'_>) -> v4::Events {
     let mut out = v4::Events::default();
     let meta = BlockMeta {
         number: blk.number,
-        timestamp: blk.timestamp_seconds(),
+        timestamp: blk
+            .header
+            .get()
+            .ok()
+            .flatten()
+            .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+            .unwrap_or(0) as u64,
     };
 
-    for receipt in blk.receipts() {
-        let tx_hash = Hex(&receipt.transaction.hash).to_string();
-        for log in receipt.receipt.logs.iter() {
-            let contract = addr_hex(&log.address);
+    for trx in blk.transactions() {
+        let Ok(Some(receipt)) = trx.receipt() else {
+            continue;
+        };
+        let tx_hash = Hex(&trx.hash).to_string();
+        for log in receipt.logs.iter() {
+            let Ok(log) = log else { continue };
+            let contract = addr_hex(log.address);
             let log_index = log.index;
             let id = event_id(&tx_hash, log_index);
 
             // ---- PoolManager (address-gated) ----
-            if let Some(event) = abi::pool_manager::events::Initialize::match_and_decode(log) {
+            if let Some(event) = abi::pool_manager::events::Initialize::match_and_decode(&log) {
                 if contract == config.pool_manager {
                     out.initialize_events.push(v4::InitializeEvent {
                         id: id.clone(),
@@ -106,7 +116,7 @@ pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
                 continue;
             }
 
-            if let Some(event) = abi::pool_manager::events::Swap::match_and_decode(log) {
+            if let Some(event) = abi::pool_manager::events::Swap::match_and_decode(&log) {
                 if contract == config.pool_manager {
                     out.swap_events.push(v4::SwapEvent {
                         id: id.clone(),
@@ -129,7 +139,7 @@ pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
                 continue;
             }
 
-            if let Some(event) = abi::pool_manager::events::ModifyLiquidity::match_and_decode(log) {
+            if let Some(event) = abi::pool_manager::events::ModifyLiquidity::match_and_decode(&log) {
                 if contract == config.pool_manager {
                     out.modify_liquidity_events.push(v4::ModifyLiquidityEvent {
                         id: id.clone(),
@@ -151,7 +161,7 @@ pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
             }
 
             // ---- PositionManager (address-gated; Transfer is generic ERC-721) ----
-            if let Some(event) = abi::position_manager::events::Transfer::match_and_decode(log) {
+            if let Some(event) = abi::position_manager::events::Transfer::match_and_decode(&log) {
                 if contract == config.position_manager {
                     out.position_transfer_events.push(v4::PositionTransferEvent {
                         id: id.clone(),
@@ -169,7 +179,7 @@ pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
                 continue;
             }
 
-            if let Some(event) = abi::position_manager::events::Subscription::match_and_decode(log) {
+            if let Some(event) = abi::position_manager::events::Subscription::match_and_decode(&log) {
                 if contract == config.position_manager {
                     out.position_subscription_events.push(v4::PositionSubscriptionEvent {
                         id: id.clone(),
@@ -186,7 +196,7 @@ pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
                 continue;
             }
 
-            if let Some(event) = abi::position_manager::events::Unsubscription::match_and_decode(log) {
+            if let Some(event) = abi::position_manager::events::Unsubscription::match_and_decode(&log) {
                 if contract == config.position_manager {
                     out.position_unsubscription_events
                         .push(v4::PositionUnsubscriptionEvent {

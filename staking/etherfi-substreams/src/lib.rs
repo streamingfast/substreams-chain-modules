@@ -6,7 +6,7 @@ mod pb;
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::etherfi::types::v1::{
@@ -20,8 +20,14 @@ const LIQUIDITY_POOL: [u8; 20] = hex_literal::hex!("308861a430be4cce5502d0a12724
 
 const NODES_MANAGER: [u8; 20] = hex_literal::hex!("8b71140ad2e5d1e7018d2a7f8a288bd3cd38916f");
 
-fn block_timestamp(block: &Block) -> u64 {
-    block.header.timestamp.seconds as u64
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
+    block
+        .header
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 fn fmt_addr(addr: &[u8]) -> String {
@@ -33,18 +39,19 @@ fn fmt_bytes32(b: &[u8]) -> String {
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls()? {
+            let log = &lc.log;
             let id = format!("{}-{}", tx_hash, log.index);
 
             if log.address == EARLY_ADOPTER_POOL {
-                if let Some(ev) = abi::early_adopter_pool::events::DepositEth::match_and_decode(log) {
+                if let Some(ev) = abi::early_adopter_pool::events::DepositEth::match_and_decode(&log) {
                     events.early_deposits.push(EarlyDeposit {
                         id,
                         sender: fmt_addr(&ev.sender),
@@ -58,7 +65,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::early_adopter_pool::events::DepositErc20::match_and_decode(log) {
+                if let Some(ev) = abi::early_adopter_pool::events::DepositErc20::match_and_decode(&log) {
                     events.early_deposits.push(EarlyDeposit {
                         id,
                         sender: fmt_addr(&ev.sender),
@@ -72,7 +79,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::early_adopter_pool::events::Withdrawn::match_and_decode(log) {
+                if let Some(ev) = abi::early_adopter_pool::events::Withdrawn::match_and_decode(&log) {
                     events.early_withdrawns.push(EarlyWithdrawn {
                         id,
                         sender: fmt_addr(&ev.sender),
@@ -84,7 +91,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::early_adopter_pool::events::Fundsclaimed::match_and_decode(log) {
+                if let Some(ev) = abi::early_adopter_pool::events::Fundsclaimed::match_and_decode(&log) {
                     events.funds_claimed.push(FundsClaimed {
                         id,
                         user: fmt_addr(&ev.user),
@@ -99,7 +106,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == LIQUIDITY_POOL {
-                if let Some(ev) = abi::liquidity_pool::events::Deposit1::match_and_decode(log) {
+                if let Some(ev) = abi::liquidity_pool::events::Deposit1::match_and_decode(&log) {
                     events.deposits.push(Deposit {
                         id,
                         sender: fmt_addr(&ev.sender),
@@ -114,7 +121,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::liquidity_pool::events::Deposit2::match_and_decode(log) {
+                if let Some(ev) = abi::liquidity_pool::events::Deposit2::match_and_decode(&log) {
                     events.deposits.push(Deposit {
                         id,
                         sender: fmt_addr(&ev.sender),
@@ -129,7 +136,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::liquidity_pool::events::Withdraw1::match_and_decode(log) {
+                if let Some(ev) = abi::liquidity_pool::events::Withdraw1::match_and_decode(&log) {
                     events.withdraws.push(Withdraw {
                         id,
                         sender: fmt_addr(&ev.sender),
@@ -144,7 +151,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::liquidity_pool::events::Withdraw2::match_and_decode(log) {
+                if let Some(ev) = abi::liquidity_pool::events::Withdraw2::match_and_decode(&log) {
                     events.withdraws.push(Withdraw {
                         id,
                         sender: fmt_addr(&ev.sender),
@@ -159,7 +166,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::liquidity_pool::events::Rebase::match_and_decode(log) {
+                if let Some(ev) = abi::liquidity_pool::events::Rebase::match_and_decode(&log) {
                     events.rebases.push(Rebase {
                         id,
                         total_eth_locked: ev.total_eth_locked.to_string(),
@@ -172,7 +179,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::liquidity_pool::events::ValidatorRegistered::match_and_decode(log) {
+                if let Some(ev) = abi::liquidity_pool::events::ValidatorRegistered::match_and_decode(&log) {
                     events.validators_registered.push(ValidatorRegistered {
                         id,
                         validator_id: ev.validator_id.to_string(),
@@ -186,7 +193,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::liquidity_pool::events::ValidatorApproved::match_and_decode(log) {
+                if let Some(ev) = abi::liquidity_pool::events::ValidatorApproved::match_and_decode(&log) {
                     events.validators_approved.push(ValidatorApproved {
                         id,
                         validator_id: ev.validator_id.to_string(),
@@ -200,7 +207,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == NODES_MANAGER {
-                if let Some(ev) = abi::etherfi_nodes_manager::events::FullWithdrawal::match_and_decode(log) {
+                if let Some(ev) = abi::etherfi_nodes_manager::events::FullWithdrawal::match_and_decode(&log) {
                     events.full_withdrawals.push(FullWithdrawal {
                         id,
                         validator_id: ev.validator_id.to_string(),
@@ -217,7 +224,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::etherfi_nodes_manager::events::PartialWithdrawal::match_and_decode(log) {
+                if let Some(ev) = abi::etherfi_nodes_manager::events::PartialWithdrawal::match_and_decode(&log) {
                     events.partial_withdrawals.push(PartialWithdrawal {
                         id,
                         validator_id: ev.validator_id.to_string(),
@@ -234,7 +241,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::etherfi_nodes_manager::events::NodeExitRequested::match_and_decode(log) {
+                if let Some(ev) = abi::etherfi_nodes_manager::events::NodeExitRequested::match_and_decode(&log) {
                     events.node_exit_requests.push(NodeExitRequested {
                         id,
                         validator_id: ev.validator_id.to_string(),
@@ -246,7 +253,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::etherfi_nodes_manager::events::NodeExitProcessed::match_and_decode(log) {
+                if let Some(ev) = abi::etherfi_nodes_manager::events::NodeExitProcessed::match_and_decode(&log) {
                     events.node_exit_processed.push(NodeExitProcessed {
                         id,
                         validator_id: ev.validator_id.to_string(),
@@ -258,7 +265,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::etherfi_nodes_manager::events::NodeEvicted::match_and_decode(log) {
+                if let Some(ev) = abi::etherfi_nodes_manager::events::NodeEvicted::match_and_decode(&log) {
                     events.node_evictions.push(NodeEvicted {
                         id,
                         validator_id: ev.validator_id.to_string(),

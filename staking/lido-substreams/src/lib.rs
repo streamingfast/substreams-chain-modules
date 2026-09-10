@@ -6,7 +6,7 @@ mod pb;
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::lido::types::v1::{
@@ -20,23 +20,30 @@ const LIDO_ORACLE: [u8; 20] = hex_literal::hex!("442af784A788A5bd6F42A01Ebe9F287
 // WithdrawalQueue — deployed block 17172547
 const WITHDRAWAL_QUEUE: [u8; 20] = hex_literal::hex!("889edC2eDab5f40e902b864aD4d7AdE8E412F9B1");
 
-fn block_timestamp(block: &Block) -> u64 {
-    block.header.timestamp.seconds as u64
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
+    block
+        .header
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls()? {
+            let log = &lc.log;
             let addr = &log.address;
 
             if addr == &LIDO {
-                if let Some(ev) = abi::lido::events::Submitted::match_and_decode(log) {
+                if let Some(ev) = abi::lido::events::Submitted::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.deposits.push(Deposit {
                         id,
@@ -51,7 +58,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::lido::events::Transfer::match_and_decode(log) {
+                if let Some(ev) = abi::lido::events::Transfer::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.transfers.push(Transfer {
                         id,
@@ -66,7 +73,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::lido::events::EthDistributed::match_and_decode(log) {
+                if let Some(ev) = abi::lido::events::EthDistributed::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.eth_distributions.push(EthDistribution {
                         id,
@@ -86,7 +93,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if addr == &LIDO_ORACLE {
-                if let Some(ev) = abi::lido_oracle::events::PostTotalShares::match_and_decode(log) {
+                if let Some(ev) = abi::lido_oracle::events::PostTotalShares::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.oracle_reports.push(OracleReport {
                         id,
@@ -104,7 +111,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if addr == &WITHDRAWAL_QUEUE {
-                if let Some(ev) = abi::withdrawal_queue::events::WithdrawalRequested::match_and_decode(log) {
+                if let Some(ev) = abi::withdrawal_queue::events::WithdrawalRequested::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.withdrawal_requests.push(WithdrawalRequest {
                         id,
@@ -121,7 +128,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) = abi::withdrawal_queue::events::WithdrawalClaimed::match_and_decode(log) {
+                if let Some(ev) = abi::withdrawal_queue::events::WithdrawalClaimed::match_and_decode(&log) {
                     let id = format!("{}-{}", tx_hash, log.index);
                     events.withdrawal_claims.push(WithdrawalClaim {
                         id,

@@ -7,7 +7,7 @@ use substreams::errors::Error;
 use substreams::store::{StoreGet, StoreGetString, StoreNew, StoreSet, StoreSetString};
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::tokemak::types::v1::{Events, ManagerPoolRegistered, RewardsClaimed, VaultWithdrawalRequested};
@@ -20,17 +20,27 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
-    block.header.timestamp.seconds as u64
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
+    block
+        .header
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::store]
-pub fn store_pools(block: Block, store: StoreSetString) {
+pub fn store_pools(block: &BlockLazyView<'_>, store: StoreSetString) {
     for trx in block.transactions() {
-        for log in trx.receipt().logs() {
-            if log.address() == FACTORY.as_slice() {
-                if let Some(ev) = abi::manager::events::PoolRegistered::match_and_decode(log) {
-                    store.set(log.ordinal(), fmt_addr(&ev.pool), &"1".to_string());
+        let Ok(Some(receipt)) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let Ok(log) = log else { continue };
+            if log.address == FACTORY.as_slice() {
+                if let Some(ev) = abi::manager::events::PoolRegistered::match_and_decode(&log) {
+                    store.set(log.ordinal, fmt_addr(&ev.pool), &"1".to_string());
                 }
             }
         }
@@ -38,23 +48,27 @@ pub fn store_pools(block: Block, store: StoreSetString) {
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>, store: StoreGetString) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for log in trx.receipt().logs() {
-            let id = format!("{}-{}", tx_hash, log.index());
+        let Some(receipt) = trx.receipt()? else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let log = log?;
+            let id = format!("{}-{}", tx_hash, log.index);
 
-            if log.address() == FACTORY.as_slice() {
-                if let Some(ev) = abi::manager::events::PoolRegistered::match_and_decode(log) {
+            if log.address == FACTORY.as_slice() {
+                if let Some(ev) = abi::manager::events::PoolRegistered::match_and_decode(&log) {
                     events.manager_pool_registereds.push(ManagerPoolRegistered {
                         id: id.clone(),
                         pool: fmt_addr(&ev.pool),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -62,16 +76,16 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                 }
             }
 
-            if store.get_last(fmt_addr(log.address())).is_some() {
-                let pool = fmt_addr(log.address());
-                if let Some(ev) = abi::vault::events::WithdrawalRequested::match_and_decode(log) {
+            if store.get_last(fmt_addr(log.address)).is_some() {
+                let pool = fmt_addr(log.address);
+                if let Some(ev) = abi::vault::events::WithdrawalRequested::match_and_decode(&log) {
                     events.vault_withdrawal_requesteds.push(VaultWithdrawalRequested {
                         id: id.clone(),
                         pool: pool.clone(),
                         requestor: fmt_addr(&ev.requestor),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -79,15 +93,15 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                 }
             }
 
-            if log.address() == REWARDS.as_slice() {
-                if let Some(ev) = abi::rewards::events::Claimed::match_and_decode(log) {
+            if log.address == REWARDS.as_slice() {
+                if let Some(ev) = abi::rewards::events::Claimed::match_and_decode(&log) {
                     events.rewards_claimeds.push(RewardsClaimed {
                         id: id.clone(),
                         cycle: ev.cycle.to_string(),
                         recipient: fmt_addr(&ev.recipient),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -95,7 +109,7 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                 }
             }
 
-            if log.address() == ON_CHAIN_VOTE.as_slice() {}
+            if log.address == ON_CHAIN_VOTE.as_slice() {}
         }
     }
 

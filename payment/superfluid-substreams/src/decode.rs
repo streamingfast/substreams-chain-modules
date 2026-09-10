@@ -38,7 +38,7 @@ fn is_fixed(contract: &str, expected: &str) -> bool {
 }
 
 pub fn decode_block(
-    blk: &eth::Block,
+    blk: &eth::BlockLazyView<'_>,
     super_tokens: &PrefixedGet<'_>,
     pools: &PrefixedGet<'_>,
     gov_addrs: &PrefixedGet<'_>,
@@ -46,7 +46,13 @@ pub fn decode_block(
     let mut out = sf::Events::default();
     let meta = BlockMeta {
         number: blk.number,
-        timestamp: blk.timestamp_seconds(),
+        timestamp: blk
+            .header
+            .get()
+            .ok()
+            .flatten()
+            .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+            .unwrap_or(0) as u64,
     };
 
     let mut local_super_tokens: HashSet<String> = HashSet::new();
@@ -54,38 +60,46 @@ pub fn decode_block(
     let mut local_gov: HashSet<String> = HashSet::new();
     local_gov.insert(KNOWN_GOV.to_string());
 
-    for receipt in blk.receipts() {
-        for log in receipt.receipt.logs.iter() {
-            let emitter = addr_hex(&log.address);
+    for trx in blk.transactions() {
+        let Ok(Some(receipt)) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let Ok(log) = log else { continue };
+            let emitter = addr_hex(log.address);
             if is_fixed(&emitter, FACTORY) {
-                if let Some(ev) = abi::factory::events::SuperTokenCreated::match_and_decode(log) {
+                if let Some(ev) = abi::factory::events::SuperTokenCreated::match_and_decode(&log) {
                     local_super_tokens.insert(hex::encode(&ev.token));
                 }
-                if let Some(ev) = abi::factory::events::CustomSuperTokenCreated::match_and_decode(log) {
+                if let Some(ev) = abi::factory::events::CustomSuperTokenCreated::match_and_decode(&log) {
                     local_super_tokens.insert(hex::encode(&ev.token));
                 }
             }
             if is_fixed(&emitter, GDA) {
-                if let Some(ev) = abi::gda::events::PoolCreated::match_and_decode(log) {
+                if let Some(ev) = abi::gda::events::PoolCreated::match_and_decode(&log) {
                     local_pools.insert(hex::encode(&ev.pool));
                 }
             }
             if is_fixed(&emitter, HOST) {
-                if let Some(ev) = abi::host::events::GovernanceReplaced::match_and_decode(log) {
+                if let Some(ev) = abi::host::events::GovernanceReplaced::match_and_decode(&log) {
                     local_gov.insert(hex::encode(&ev.new_gov));
                 }
             }
         }
     }
 
-    for receipt in blk.receipts() {
-        let tx_hash = Hex(&receipt.transaction.hash).to_string();
-        for log in receipt.receipt.logs.iter() {
-            let contract = addr_hex(&log.address);
+    for trx in blk.transactions() {
+        let Ok(Some(receipt)) = trx.receipt() else {
+            continue;
+        };
+        let tx_hash = Hex(&trx.hash).to_string();
+        for log in receipt.logs.iter() {
+            let Ok(log) = log else { continue };
+            let contract = addr_hex(log.address);
             let log_index = log.index;
             let id = event_id(&tx_hash, log_index);
 
-            if let Some(event) = abi::cfa::events::FlowUpdated::match_and_decode(log) {
+            if let Some(event) = abi::cfa::events::FlowUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, CFA) {
                     out.flow_updated_events.push(sf::FlowUpdatedEvent {
                         id: id.clone(),
@@ -107,7 +121,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::cfa::events::FlowUpdatedExtension::match_and_decode(log) {
+            if let Some(event) = abi::cfa::events::FlowUpdatedExtension::match_and_decode(&log) {
                 if is_fixed(&contract, CFA) {
                     out.flow_updated_extension_events.push(sf::FlowUpdatedExtensionEvent {
                         id: id.clone(),
@@ -124,7 +138,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::cfa::events::FlowOperatorUpdated::match_and_decode(log) {
+            if let Some(event) = abi::cfa::events::FlowOperatorUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, CFA) {
                     out.flow_operator_updated_events.push(sf::FlowOperatorUpdatedEvent {
                         id: id.clone(),
@@ -144,7 +158,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::IndexCreated::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::IndexCreated::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.index_created_events.push(sf::IndexCreatedEvent {
                         id: id.clone(),
@@ -163,7 +177,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::IndexDistributionClaimed::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::IndexDistributionClaimed::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.index_distribution_claimed_events.push(sf::IndexDistributionClaimedEvent {
                         id: id.clone(),
@@ -183,7 +197,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::IndexUpdated::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::IndexUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.index_updated_events.push(sf::IndexUpdatedEvent {
                         id: id.clone(),
@@ -206,7 +220,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::IndexSubscribed::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::IndexSubscribed::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.index_subscribed_events.push(sf::IndexSubscribedEvent {
                         id: id.clone(),
@@ -226,7 +240,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::IndexUnitsUpdated::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::IndexUnitsUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.index_units_updated_events.push(sf::IndexUnitsUpdatedEvent {
                         id: id.clone(),
@@ -247,7 +261,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::IndexUnsubscribed::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::IndexUnsubscribed::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.index_unsubscribed_events.push(sf::IndexUnsubscribedEvent {
                         id: id.clone(),
@@ -267,7 +281,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::SubscriptionApproved::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::SubscriptionApproved::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.subscription_approved_events.push(sf::SubscriptionApprovedEvent {
                         id: id.clone(),
@@ -287,7 +301,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::SubscriptionDistributionClaimed::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::SubscriptionDistributionClaimed::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.subscription_distribution_claimed_events.push(sf::SubscriptionDistributionClaimedEvent {
                         id: id.clone(),
@@ -307,7 +321,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::SubscriptionRevoked::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::SubscriptionRevoked::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.subscription_revoked_events.push(sf::SubscriptionRevokedEvent {
                         id: id.clone(),
@@ -327,7 +341,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::ida::events::SubscriptionUnitsUpdated::match_and_decode(log) {
+            if let Some(event) = abi::ida::events::SubscriptionUnitsUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, IDA) {
                     out.subscription_units_updated_events.push(sf::SubscriptionUnitsUpdatedEvent {
                         id: id.clone(),
@@ -348,7 +362,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::gda::events::BufferAdjusted::match_and_decode(log) {
+            if let Some(event) = abi::gda::events::BufferAdjusted::match_and_decode(&log) {
                 if is_fixed(&contract, GDA) {
                     out.buffer_adjusted_events.push(sf::BufferAdjustedEvent {
                         id: id.clone(),
@@ -369,7 +383,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::gda::events::FlowDistributionUpdated::match_and_decode(log) {
+            if let Some(event) = abi::gda::events::FlowDistributionUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, GDA) {
                     out.flow_distribution_updated_events.push(sf::FlowDistributionUpdatedEvent {
                         id: id.clone(),
@@ -394,7 +408,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::gda::events::InstantDistributionUpdated::match_and_decode(log) {
+            if let Some(event) = abi::gda::events::InstantDistributionUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, GDA) {
                     out.instant_distribution_updated_events.push(sf::InstantDistributionUpdatedEvent {
                         id: id.clone(),
@@ -416,7 +430,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::gda::events::PoolConnectionUpdated::match_and_decode(log) {
+            if let Some(event) = abi::gda::events::PoolConnectionUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, GDA) {
                     out.pool_connection_updated_events.push(sf::PoolConnectionUpdatedEvent {
                         id: id.clone(),
@@ -436,7 +450,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::gda::events::PoolCreated::match_and_decode(log) {
+            if let Some(event) = abi::gda::events::PoolCreated::match_and_decode(&log) {
                 if is_fixed(&contract, GDA) {
                     out.pool_created_events.push(sf::PoolCreatedEvent {
                         id: id.clone(),
@@ -454,7 +468,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::factory::events::SuperTokenCreated::match_and_decode(log) {
+            if let Some(event) = abi::factory::events::SuperTokenCreated::match_and_decode(&log) {
                 if is_fixed(&contract, FACTORY) {
                     out.super_token_created_events.push(sf::SuperTokenCreatedEvent {
                         id: id.clone(),
@@ -470,7 +484,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::factory::events::CustomSuperTokenCreated::match_and_decode(log) {
+            if let Some(event) = abi::factory::events::CustomSuperTokenCreated::match_and_decode(&log) {
                 if is_fixed(&contract, FACTORY) {
                     out.custom_super_token_created_events.push(sf::CustomSuperTokenCreatedEvent {
                         id: id.clone(),
@@ -486,7 +500,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::factory::events::SuperTokenLogicCreated::match_and_decode(log) {
+            if let Some(event) = abi::factory::events::SuperTokenLogicCreated::match_and_decode(&log) {
                 if is_fixed(&contract, FACTORY) {
                     out.super_token_logic_created_events.push(sf::SuperTokenLogicCreatedEvent {
                         id: id.clone(),
@@ -502,7 +516,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::AgreementLiquidatedBy::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::AgreementLiquidatedBy::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.agreement_liquidated_by_events.push(sf::AgreementLiquidatedByEvent {
                         id: id.clone(),
@@ -524,7 +538,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::AgreementLiquidatedV2::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::AgreementLiquidatedV2::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.agreement_liquidated_v2_events.push(sf::AgreementLiquidatedV2Event {
                         id: id.clone(),
@@ -547,7 +561,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::Burned::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::Burned::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.burned_events.push(sf::BurnedEvent {
                         id: id.clone(),
@@ -567,7 +581,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::Minted::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::Minted::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.minted_events.push(sf::MintedEvent {
                         id: id.clone(),
@@ -587,7 +601,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::Sent::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::Sent::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.sent_events.push(sf::SentEvent {
                         id: id.clone(),
@@ -608,7 +622,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::TokenUpgraded::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::TokenUpgraded::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.token_upgraded_events.push(sf::TokenUpgradedEvent {
                         id: id.clone(),
@@ -625,7 +639,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::TokenDowngraded::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::TokenDowngraded::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.token_downgraded_events.push(sf::TokenDowngradedEvent {
                         id: id.clone(),
@@ -642,7 +656,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::Transfer::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::Transfer::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.transfer_events.push(sf::TransferEvent {
                         id: id.clone(),
@@ -660,7 +674,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::super_token::events::Approval::match_and_decode(log) {
+            if let Some(event) = abi::super_token::events::Approval::match_and_decode(&log) {
                 if super_tokens.get_last(&contract).is_some() || local_super_tokens.contains(&contract) {
                     out.approval_events.push(sf::ApprovalEvent {
                         id: id.clone(),
@@ -678,7 +692,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::host::events::GovernanceReplaced::match_and_decode(log) {
+            if let Some(event) = abi::host::events::GovernanceReplaced::match_and_decode(&log) {
                 if is_fixed(&contract, HOST) {
                     out.governance_replaced_events.push(sf::GovernanceReplacedEvent {
                         id: id.clone(),
@@ -695,7 +709,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::host::events::AgreementClassRegistered::match_and_decode(log) {
+            if let Some(event) = abi::host::events::AgreementClassRegistered::match_and_decode(&log) {
                 if is_fixed(&contract, HOST) {
                     out.agreement_class_registered_events.push(sf::AgreementClassRegisteredEvent {
                         id: id.clone(),
@@ -712,7 +726,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::host::events::AgreementClassUpdated::match_and_decode(log) {
+            if let Some(event) = abi::host::events::AgreementClassUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, HOST) {
                     out.agreement_class_updated_events.push(sf::AgreementClassUpdatedEvent {
                         id: id.clone(),
@@ -729,7 +743,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::host::events::SuperTokenFactoryUpdated::match_and_decode(log) {
+            if let Some(event) = abi::host::events::SuperTokenFactoryUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, HOST) {
                     out.super_token_factory_updated_events.push(sf::SuperTokenFactoryUpdatedEvent {
                         id: id.clone(),
@@ -745,7 +759,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::host::events::SuperTokenLogicUpdated::match_and_decode(log) {
+            if let Some(event) = abi::host::events::SuperTokenLogicUpdated::match_and_decode(&log) {
                 if is_fixed(&contract, HOST) {
                     out.super_token_logic_updated_events.push(sf::SuperTokenLogicUpdatedEvent {
                         id: id.clone(),
@@ -762,7 +776,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::host::events::AppRegistered::match_and_decode(log) {
+            if let Some(event) = abi::host::events::AppRegistered::match_and_decode(&log) {
                 if is_fixed(&contract, HOST) {
                     out.app_registered_events.push(sf::AppRegisteredEvent {
                         id: id.clone(),
@@ -778,7 +792,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::host::events::Jail::match_and_decode(log) {
+            if let Some(event) = abi::host::events::Jail::match_and_decode(&log) {
                 if is_fixed(&contract, HOST) {
                     out.jail_events.push(sf::JailEvent {
                         id: id.clone(),
@@ -795,7 +809,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::resolver::events::RoleAdminChanged::match_and_decode(log) {
+            if let Some(event) = abi::resolver::events::RoleAdminChanged::match_and_decode(&log) {
                 if is_fixed(&contract, RESOLVER) {
                     out.role_admin_changed_events.push(sf::RoleAdminChangedEvent {
                         id: id.clone(),
@@ -813,7 +827,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::resolver::events::RoleGranted::match_and_decode(log) {
+            if let Some(event) = abi::resolver::events::RoleGranted::match_and_decode(&log) {
                 if is_fixed(&contract, RESOLVER) {
                     out.role_granted_events.push(sf::RoleGrantedEvent {
                         id: id.clone(),
@@ -831,7 +845,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::resolver::events::RoleRevoked::match_and_decode(log) {
+            if let Some(event) = abi::resolver::events::RoleRevoked::match_and_decode(&log) {
                 if is_fixed(&contract, RESOLVER) {
                     out.role_revoked_events.push(sf::RoleRevokedEvent {
                         id: id.clone(),
@@ -849,7 +863,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::resolver::events::Set::match_and_decode(log) {
+            if let Some(event) = abi::resolver::events::Set::match_and_decode(&log) {
                 if is_fixed(&contract, RESOLVER) {
                     out.set_events.push(sf::SetEvent {
                         id: id.clone(),
@@ -866,7 +880,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::governance::events::ConfigChanged::match_and_decode(log) {
+            if let Some(event) = abi::governance::events::ConfigChanged::match_and_decode(&log) {
                 if gov_addrs.get_last(&contract).is_some() || local_gov.contains(&contract) {
                     out.config_changed_events.push(sf::ConfigChangedEvent {
                         id: id.clone(),
@@ -886,7 +900,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::governance::events::RewardAddressChanged::match_and_decode(log) {
+            if let Some(event) = abi::governance::events::RewardAddressChanged::match_and_decode(&log) {
                 if gov_addrs.get_last(&contract).is_some() || local_gov.contains(&contract) {
                     out.reward_address_changed_events.push(sf::RewardAddressChangedEvent {
                         id: id.clone(),
@@ -905,7 +919,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::governance::events::CfAv1LiquidationPeriodChanged::match_and_decode(log) {
+            if let Some(event) = abi::governance::events::CfAv1LiquidationPeriodChanged::match_and_decode(&log) {
                 if gov_addrs.get_last(&contract).is_some() || local_gov.contains(&contract) {
                     out.cfav1_liquidation_period_changed_events.push(sf::CFAv1LiquidationPeriodChangedEvent {
                         id: id.clone(),
@@ -924,7 +938,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::governance::events::PppConfigurationChanged::match_and_decode(log) {
+            if let Some(event) = abi::governance::events::PppConfigurationChanged::match_and_decode(&log) {
                 if gov_addrs.get_last(&contract).is_some() || local_gov.contains(&contract) {
                     out.pppconfiguration_changed_events.push(sf::PPPConfigurationChangedEvent {
                         id: id.clone(),
@@ -944,7 +958,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::governance::events::SuperTokenMinimumDepositChanged::match_and_decode(log) {
+            if let Some(event) = abi::governance::events::SuperTokenMinimumDepositChanged::match_and_decode(&log) {
                 if gov_addrs.get_last(&contract).is_some() || local_gov.contains(&contract) {
                     out.super_token_minimum_deposit_changed_events.push(sf::SuperTokenMinimumDepositChangedEvent {
                         id: id.clone(),
@@ -963,7 +977,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::governance::events::TrustedForwarderChanged::match_and_decode(log) {
+            if let Some(event) = abi::governance::events::TrustedForwarderChanged::match_and_decode(&log) {
                 if gov_addrs.get_last(&contract).is_some() || local_gov.contains(&contract) {
                     out.trusted_forwarder_changed_events.push(sf::TrustedForwarderChangedEvent {
                         id: id.clone(),
@@ -983,7 +997,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::toga::events::NewPic::match_and_decode(log) {
+            if let Some(event) = abi::toga::events::NewPic::match_and_decode(&log) {
                 if is_fixed(&contract, TOGA) {
                     out.new_pic_events.push(sf::NewPICEvent {
                         id: id.clone(),
@@ -1002,7 +1016,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::toga::events::ExitRateChanged::match_and_decode(log) {
+            if let Some(event) = abi::toga::events::ExitRateChanged::match_and_decode(&log) {
                 if is_fixed(&contract, TOGA) {
                     out.exit_rate_changed_events.push(sf::ExitRateChangedEvent {
                         id: id.clone(),
@@ -1019,7 +1033,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::toga::events::BondIncreased::match_and_decode(log) {
+            if let Some(event) = abi::toga::events::BondIncreased::match_and_decode(&log) {
                 if is_fixed(&contract, TOGA) {
                     out.bond_increased_events.push(sf::BondIncreasedEvent {
                         id: id.clone(),
@@ -1036,7 +1050,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::pool::events::MemberUnitsUpdated::match_and_decode(log) {
+            if let Some(event) = abi::pool::events::MemberUnitsUpdated::match_and_decode(&log) {
                 if pools.get_last(&contract).is_some() || local_pools.contains(&contract) {
                     out.member_units_updated_events.push(sf::MemberUnitsUpdatedEvent {
                         id: id.clone(),
@@ -1055,7 +1069,7 @@ pub fn decode_block(
                 continue;
             }
 
-            if let Some(event) = abi::pool::events::DistributionClaimed::match_and_decode(log) {
+            if let Some(event) = abi::pool::events::DistributionClaimed::match_and_decode(&log) {
                 if pools.get_last(&contract).is_some() || local_pools.contains(&contract) {
                     out.distribution_claimed_events.push(sf::DistributionClaimedEvent {
                         id: id.clone(),

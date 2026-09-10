@@ -110,4 +110,4 @@ substreams-ethereum = { git = "https://github.com/streamingfast/substreams-ether
 substreams-ethereum-core = { git = "https://github.com/streamingfast/substreams-ethereum", branch = "feature/buffa" }
 substreams-ethereum-abigen = { git = "https://github.com/streamingfast/substreams-ethereum", branch = "feature/buffa" }
 substreams-ethereum-derive = { git = "https://github.com/streamingfast/substreams-ethereum", branch = "feature/buffa" }
-substreams-database-change = { path = "/Users/ulyssecorbeil/Documents/SF/substreams-sink-database-changes" }
+substreams-database-change = { git = "https://github.com/streamingfast/substreams-sink-database-changes", branch = "feature/buffa" }

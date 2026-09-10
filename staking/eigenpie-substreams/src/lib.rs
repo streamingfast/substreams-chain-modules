@@ -6,7 +6,7 @@ mod pb;
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::eigenpie::types::v1::{
@@ -20,23 +20,33 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
-    block.header.timestamp.seconds as u64
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
+    block
+        .header
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for log in trx.receipt().logs() {
-            let id = format!("{}-{}", tx_hash, log.index());
+        let Some(receipt) = trx.receipt()? else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let log = log?;
+            let id = format!("{}-{}", tx_hash, log.index);
 
-            if log.address() == EIGEN_CONFIG.as_slice() {
-                if let Some(ev) = abi::eigen_config::events::AddedNewSupportedAsset::match_and_decode(log) {
+            if log.address == EIGEN_CONFIG.as_slice() {
+                if let Some(ev) = abi::eigen_config::events::AddedNewSupportedAsset::match_and_decode(&log) {
                     events
                         .eigen_config_added_new_supported_assets
                         .push(EigenConfigAddedNewSupportedAsset {
@@ -45,13 +55,13 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                             receipt: fmt_addr(&ev.receipt),
                             deposit_limit: ev.deposit_limit.to_string(),
                             tx_hash: tx_hash.clone(),
-                            log_index: log.index() as u64,
+                            log_index: log.index as u64,
                             block_num: block.number,
                             timestamp,
                         });
                     continue;
                 }
-                if let Some(ev) = abi::eigen_config::events::ReceiptTokenUpdated::match_and_decode(log) {
+                if let Some(ev) = abi::eigen_config::events::ReceiptTokenUpdated::match_and_decode(&log) {
                     events
                         .eigen_config_receipt_token_updateds
                         .push(EigenConfigReceiptTokenUpdated {
@@ -59,7 +69,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                             asset: fmt_addr(&ev.asset),
                             receipt: fmt_addr(&ev.receipt),
                             tx_hash: tx_hash.clone(),
-                            log_index: log.index() as u64,
+                            log_index: log.index as u64,
                             block_num: block.number,
                             timestamp,
                         });
@@ -67,8 +77,8 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address() == EIGEN_STAKING.as_slice() {
-                if let Some(ev) = abi::eigen_staking::events::AssetDeposit::match_and_decode(log) {
+            if log.address == EIGEN_STAKING.as_slice() {
+                if let Some(ev) = abi::eigen_staking::events::AssetDeposit::match_and_decode(&log) {
                     events.eigen_staking_asset_deposits.push(EigenStakingAssetDeposit {
                         id: id.clone(),
                         depositor: fmt_addr(&ev.depositor),
@@ -76,7 +86,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         deposit_amount: ev.deposit_amount.to_string(),
                         referral: fmt_addr(&ev.referral),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });

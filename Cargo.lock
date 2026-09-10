@@ -1877,6 +1877,7 @@ dependencies = [
 [[package]]
 name = "substreams-database-change"
 version = "4.0.0"
+source = "git+https://github.com/streamingfast/substreams-sink-database-changes?branch=feature%2Fbuffa#e2c4a4da4ca6065c70d12f6cedb1ad847bc50f64"
 dependencies = [
  "buffa",
  "buffa-types",

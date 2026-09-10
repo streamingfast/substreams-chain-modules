@@ -104,7 +104,7 @@ mod tests {
         );
         let a = &rows.chainlink_answers[0];
         assert_eq!(a.id, "0xb-3");
-        assert_eq!(a.block_time.as_ref().map(|t| t.seconds), Some(1_781_706_601));
+        assert_eq!(a.block_time.as_option().map(|t| t.seconds), Some(1_781_706_601));
         let t = &rows.basis_ticks[0];
         assert_eq!(t.id, s.id);
         assert_eq!(t.block_time, s.block_time);

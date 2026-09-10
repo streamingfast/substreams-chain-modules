@@ -134,11 +134,12 @@ mod tests {
                 log_index: 3,
                 origin: "0xorigin".into(),
                 ..Default::default()
-            }),
+            }).into(),
             hook: Some(HookPermissions {
                 address: "0xhook".into(),
                 ..Default::default()
-            }),
+            })
+            .into(),
             priced: true,
             amounts_adjusted: true,
             ..Default::default()

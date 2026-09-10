@@ -4,9 +4,54 @@ mod idl;
 mod pb;
 
 use pb::sf::solana::idl::v1::{DataSource, IdlAccountWrite, IdlAccountWrites, Source};
-use pb::sf::solana::r#type::v1::{Account, AccountBlock};
+use pb::sf::solana::r#type::v1::{Account, AccountBlockLazyView, AccountLazyView};
 use substreams::errors::Error;
 use substreams::pb::sf::substreams::index::v1::Keys;
+
+/// The account fields the IDL decoders read, implemented for both the owned
+/// `Account` and buffa's `AccountLazyView`.
+pub trait AccountFields {
+    fn address(&self) -> &[u8];
+    fn owner(&self) -> &[u8];
+    fn data(&self) -> &[u8];
+    fn deleted(&self) -> bool;
+}
+
+impl AccountFields for Account {
+    fn address(&self) -> &[u8] {
+        &self.address
+    }
+
+    fn owner(&self) -> &[u8] {
+        &self.owner
+    }
+
+    fn data(&self) -> &[u8] {
+        &self.data
+    }
+
+    fn deleted(&self) -> bool {
+        self.deleted
+    }
+}
+
+impl AccountFields for AccountLazyView<'_> {
+    fn address(&self) -> &[u8] {
+        self.address
+    }
+
+    fn owner(&self) -> &[u8] {
+        self.owner
+    }
+
+    fn data(&self) -> &[u8] {
+        self.data
+    }
+
+    fn deleted(&self) -> bool {
+        self.deleted
+    }
+}
 
 /// Single index key. The package indexes one thing — "this block touched an IDL
 /// account" — so a constant beats a parameterised query: the deployed package stays
@@ -16,14 +61,18 @@ const IDL_KEY: &str = "idl";
 /// Marks blocks containing at least one IDL write so the map below can skip the
 /// rest. IDL writes are rare, so this is what makes a chain-wide scan affordable.
 #[substreams::handlers::map]
-fn index_idl_accounts(block: AccountBlock) -> Result<Keys, Error> {
-    Ok(index_keys(&block))
+fn index_idl_accounts(block: &AccountBlockLazyView<'_>) -> Result<Keys, Error> {
+    Ok(index_keys(block))
 }
 
 // The handler attribute rewrites the function it decorates into a wasm export, so
 // the bodies live here where tests can reach them.
-fn index_keys(block: &AccountBlock) -> Keys {
-    let hit = block.accounts.iter().any(|a| idl::is_idl_account(&a.owner, &a.data));
+fn index_keys(block: &AccountBlockLazyView<'_>) -> Keys {
+    let hit = block
+        .accounts
+        .iter()
+        .filter_map(|a| a.ok())
+        .any(|a| idl::is_idl_account(a.owner, a.data));
 
     Keys {
         keys: if hit { vec![IDL_KEY.to_string()] } else { vec![] },
@@ -38,13 +87,17 @@ fn index_keys(block: &AccountBlock) -> Keys {
 /// enumerate them. Taking the source directly also keeps slot and block time, which
 /// `FilteredAccounts` drops.
 #[substreams::handlers::map]
-fn map_idl_accounts(block: AccountBlock) -> Result<IdlAccountWrites, Error> {
-    Ok(collect_writes(&block))
+fn map_idl_accounts(block: &AccountBlockLazyView<'_>) -> Result<IdlAccountWrites, Error> {
+    Ok(collect_writes(block))
 }
 
-fn collect_writes(block: &AccountBlock) -> IdlAccountWrites {
+fn collect_writes(block: &AccountBlockLazyView<'_>) -> IdlAccountWrites {
     let slot = block.slot;
-    let block_time = block.timestamp.seconds;
+    let block_time = block
+        .timestamp
+        .as_option()
+        .map(|t| t.seconds)
+        .unwrap_or_default();
 
     // Per-block allowance, not per-account: without it a block carrying a dozen
     // bombs multiplies the per-payload ceiling by a dozen, which on wasm32 is
@@ -53,8 +106,9 @@ fn collect_writes(block: &AccountBlock) -> IdlAccountWrites {
     let writes = block
         .accounts
         .iter()
-        .filter(|a| idl::is_idl_account(&a.owner, &a.data))
-        .map(|a| clamp_varchars(decode_write(a, slot, block_time, &mut allowance)))
+        .filter_map(|a| a.ok())
+        .filter(|a| idl::is_idl_account(a.owner, a.data))
+        .map(|a| clamp_varchars(decode_write(&a, slot, block_time, &mut allowance)))
         .collect();
 
     IdlAccountWrites { writes }
@@ -105,37 +159,46 @@ fn clamp_varchars(mut w: IdlAccountWrite) -> IdlAccountWrite {
     w
 }
 
-fn decode_write(account: &Account, slot: u64, block_time: i64, allowance: &mut usize) -> IdlAccountWrite {
-    let address = bs58::encode(&account.address).into_string();
+fn decode_write<A: AccountFields + ?Sized>(
+    account: &A,
+    slot: u64,
+    block_time: i64,
+    allowance: &mut usize,
+) -> IdlAccountWrite {
+    let address = bs58::encode(account.address()).into_string();
 
     let base = IdlAccountWrite {
         id: format!("{address}:{slot}"),
         account_address: address,
         slot,
         block_time,
-        deleted: account.deleted,
+        deleted: account.deleted(),
         version_major: -1,
         ..Default::default()
     };
 
-    if account.owner == idl::METADATA_PROGRAM_ID {
+    if account.owner() == idl::METADATA_PROGRAM_ID {
         return decode_metadata(account, base, allowance);
     }
     decode_legacy(account, base, allowance)
 }
 
-fn decode_legacy(account: &Account, mut write: IdlAccountWrite, allowance: &mut usize) -> IdlAccountWrite {
+fn decode_legacy<A: AccountFields + ?Sized>(
+    account: &A,
+    mut write: IdlAccountWrite,
+    allowance: &mut usize,
+) -> IdlAccountWrite {
     // create_with_seed(base, "anchor:idl", program_id) takes the program as the owner,
     // so the account owner is the program the IDL describes.
-    write.program_id = bs58::encode(&account.owner).into_string();
+    write.program_id = bs58::encode(account.owner()).into_string();
     write.source = Source::Legacy.into();
     write.compression = 2; // legacy IDLs are always zlib
 
-    let parsed = match idl::parse_legacy(&account.data) {
+    let parsed = match idl::parse_legacy(account.data()) {
         Ok(parsed) => parsed,
         Err(e) => {
             write.decode_error = format!("legacy header: {e}");
-            write.payload_len = account.data.len().saturating_sub(44) as u32;
+            write.payload_len = account.data().len().saturating_sub(44) as u32;
             write.payload_omitted = write.payload_len > 0;
             return write;
         }
@@ -151,14 +214,18 @@ fn decode_legacy(account: &Account, mut write: IdlAccountWrite, allowance: &mut 
     finish(write, parsed.payload, 2, allowance)
 }
 
-fn decode_metadata(account: &Account, mut write: IdlAccountWrite, allowance: &mut usize) -> IdlAccountWrite {
+fn decode_metadata<A: AccountFields + ?Sized>(
+    account: &A,
+    mut write: IdlAccountWrite,
+    allowance: &mut usize,
+) -> IdlAccountWrite {
     write.source = Source::ProgramMetadata.into();
 
-    let m = match idl::parse_metadata(&account.data) {
+    let m = match idl::parse_metadata(account.data()) {
         Ok(m) => m,
         Err(e) => {
             write.decode_error = format!("metadata header: {e}");
-            write.payload_len = account.data.len().saturating_sub(96) as u32;
+            write.payload_len = account.data().len().saturating_sub(96) as u32;
             write.payload_omitted = write.payload_len > 0;
             return write;
         }
@@ -254,6 +321,7 @@ fn finish(mut write: IdlAccountWrite, payload: Vec<u8>, compression: u32, allowa
 mod tests {
     use super::*;
     use pb::sf::solana::idl::v1::Source;
+    use pb::sf::solana::r#type::v1::AccountBlock;
 
     const METADATA_HEADER_LEN: usize = 96;
 
@@ -306,12 +374,23 @@ mod tests {
         enc.finish().unwrap()
     }
 
-    fn block_of(accounts: Vec<Account>) -> AccountBlock {
+    /// The encoded block. A lazy view borrows its buffer, so the caller binds these
+    /// bytes and decodes a view from them.
+    fn block_of(accounts: Vec<Account>) -> Vec<u8> {
+        use buffa::Message;
+
         AccountBlock {
             slot: 1,
             accounts,
             ..Default::default()
         }
+        .encode_to_vec()
+    }
+
+    fn view_of(bytes: &[u8]) -> AccountBlockLazyView<'_> {
+        use buffa::view::LazyMessageView;
+
+        AccountBlockLazyView::decode_lazy(bytes).expect("valid account block")
     }
 
     /// Goes through the handler rather than calling the pieces, because the clamp is
@@ -320,7 +399,8 @@ mod tests {
     #[test]
     fn the_handler_clamps_what_it_emits() {
         let url = "h".repeat(4000);
-        let out = collect_writes(&block_of(vec![metadata_account(1, url.as_bytes())]));
+        let bytes = block_of(vec![metadata_account(1, url.as_bytes())]);
+        let out = collect_writes(&view_of(&bytes));
         assert_eq!(out.writes.len(), 1);
         assert_eq!(out.writes[0].external_url.chars().count(), VARCHAR_LEN);
     }
@@ -338,7 +418,8 @@ mod tests {
         let bomb = enc.finish().unwrap();
 
         let accounts: Vec<Account> = (0..32).map(|_| legacy_account(&bomb)).collect();
-        let out = collect_writes(&block_of(accounts));
+        let bytes = block_of(accounts);
+        let out = collect_writes(&view_of(&bytes));
 
         let stored: usize = out.writes.iter().map(|w| w.idl_json.len()).sum();
         assert!(stored > 0, "fixture must actually decode, or the bound is untested");
@@ -355,10 +436,10 @@ mod tests {
     #[test]
     fn the_index_agrees_with_the_map_on_what_counts() {
         let hit = block_of(vec![legacy_account(&zlib("{}"))]);
-        assert_eq!(index_keys(&hit).keys, vec![IDL_KEY.to_string()]);
+        assert_eq!(index_keys(&view_of(&hit)).keys, vec![IDL_KEY.to_string()]);
 
         let miss = block_of(vec![account(vec![9u8; 32], vec![0u8; 200])]);
-        assert!(index_keys(&miss).keys.is_empty());
+        assert!(index_keys(&view_of(&miss)).keys.is_empty());
     }
 
     /// The newer of the two formats, decoded end to end. Nothing else in the suite
@@ -368,7 +449,7 @@ mod tests {
         let idl = r#"{"metadata":{"version":"3.1.4"},"instructions":[]}"#;
         let w = decoded(&metadata_account_with(0, 2, &zlib(idl)));
 
-        assert_eq!(w.source, Source::ProgramMetadata as i32);
+        assert_eq!(w.source, Source::ProgramMetadata);
         assert!(w.complete, "{}", w.decode_error);
         assert_eq!(w.version, "3.1.4");
         assert_eq!(w.version_major, 3);
@@ -456,19 +537,19 @@ mod tests {
     #[test]
     fn routes_on_owner_not_content() {
         let legacy = decoded(&legacy_account(&zlib("{}")));
-        assert_eq!(legacy.source, Source::Legacy as i32);
+        assert_eq!(legacy.source, Source::Legacy);
         // create_with_seed makes the described program the owner, so it is the id.
         assert_eq!(legacy.program_id, bs58::encode([9u8; 32]).into_string());
 
         let meta = decoded(&metadata_account(0, &zlib("{}")));
-        assert_eq!(meta.source, Source::ProgramMetadata as i32);
+        assert_eq!(meta.source, Source::ProgramMetadata);
 
         // The discriminating case: legacy content under the metadata program. Owner
         // decides, so this is a malformed metadata write, not a legacy one.
         let mut data = idl::LEGACY_DISCRIMINATOR.to_vec();
         data.extend_from_slice(&[0u8; 40]);
         let confused = decoded(&account(idl::METADATA_PROGRAM_ID.to_vec(), data));
-        assert_eq!(confused.source, Source::ProgramMetadata as i32);
+        assert_eq!(confused.source, Source::ProgramMetadata);
         assert!(
             confused.decode_error.starts_with("metadata header:"),
             "{}",

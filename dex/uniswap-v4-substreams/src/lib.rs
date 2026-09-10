@@ -15,7 +15,10 @@ substreams_ethereum::init!();
 /// the manifest.
 /// No Substreams stores: all HOL is projected in ClickHouse.
 #[substreams::handlers::map]
-fn map_events(params: String, blk: eth::Block) -> Result<v4::Events, substreams::errors::Error> {
+fn map_events(
+    params: String,
+    blk: &eth::BlockLazyView<'_>,
+) -> Result<v4::Events, substreams::errors::Error> {
     let config = decode::Config::parse(&params)?;
-    Ok(decode::decode_block(&config, &blk))
+    Ok(decode::decode_block(&config, blk))
 }

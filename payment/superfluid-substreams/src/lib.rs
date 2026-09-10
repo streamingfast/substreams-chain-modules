@@ -38,28 +38,35 @@ fn same_addr(log_addr: &[u8], expected: &[u8; 20]) -> bool {
 /// - `pool:{addr}` SuperfluidPool
 /// - `gov:{addr}`  governance
 #[substreams::handlers::store]
-fn store_dynamic_addresses(blk: eth::Block, store: StoreSetIfNotExistsInt64) {
+fn store_dynamic_addresses(blk: &eth::BlockLazyView<'_>, store: StoreSetIfNotExistsInt64) {
     store.set_if_not_exists(0, format!("gov:{}", addr_key(&GOV)), &1);
 
-    for log in blk.logs() {
-        let log = log.log;
-        let emitter = log.address.as_slice();
-        if same_addr(emitter, &FACTORY) {
-            if let Some(ev) = abi::factory::events::SuperTokenCreated::match_and_decode(log) {
-                store.set_if_not_exists(0, format!("st:{}", addr_key(&ev.token)), &1);
+    for trx in blk.transactions() {
+        let Ok(Some(receipt)) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let Ok(log) = log else { continue };
+            let emitter = log.address;
+            if same_addr(emitter, &FACTORY) {
+                if let Some(ev) = abi::factory::events::SuperTokenCreated::match_and_decode(&log) {
+                    store.set_if_not_exists(0, format!("st:{}", addr_key(&ev.token)), &1);
+                }
+                if let Some(ev) =
+                    abi::factory::events::CustomSuperTokenCreated::match_and_decode(&log)
+                {
+                    store.set_if_not_exists(0, format!("st:{}", addr_key(&ev.token)), &1);
+                }
             }
-            if let Some(ev) = abi::factory::events::CustomSuperTokenCreated::match_and_decode(log) {
-                store.set_if_not_exists(0, format!("st:{}", addr_key(&ev.token)), &1);
+            if same_addr(emitter, &GDA) {
+                if let Some(ev) = abi::gda::events::PoolCreated::match_and_decode(&log) {
+                    store.set_if_not_exists(0, format!("pool:{}", addr_key(&ev.pool)), &1);
+                }
             }
-        }
-        if same_addr(emitter, &GDA) {
-            if let Some(ev) = abi::gda::events::PoolCreated::match_and_decode(log) {
-                store.set_if_not_exists(0, format!("pool:{}", addr_key(&ev.pool)), &1);
-            }
-        }
-        if same_addr(emitter, &HOST) {
-            if let Some(ev) = abi::host::events::GovernanceReplaced::match_and_decode(log) {
-                store.set_if_not_exists(0, format!("gov:{}", addr_key(&ev.new_gov)), &1);
+            if same_addr(emitter, &HOST) {
+                if let Some(ev) = abi::host::events::GovernanceReplaced::match_and_decode(&log) {
+                    store.set_if_not_exists(0, format!("gov:{}", addr_key(&ev.new_gov)), &1);
+                }
             }
         }
     }
@@ -80,7 +87,7 @@ impl PrefixedGet<'_> {
 /// Decode Superfluid logs to typed events for ClickHouse (no HOL emission).
 #[substreams::handlers::map]
 fn map_events(
-    blk: eth::Block,
+    blk: &eth::BlockLazyView<'_>,
     store: StoreGetInt64,
 ) -> Result<sf::Events, substreams::errors::Error> {
     let super_tokens = PrefixedGet {
@@ -96,5 +103,5 @@ fn map_events(
         prefix: "gov:",
     };
 
-    Ok(decode::decode_block(&blk, &super_tokens, &pools, &gov))
+    Ok(decode::decode_block(blk, &super_tokens, &pools, &gov))
 }
