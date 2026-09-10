@@ -3,7 +3,7 @@ pub mod stader {
     pub mod types {
         // @@protoc_insertion_point(attribute:stader.types.v1)
         pub mod v1 {
-            include!("stader.types.v1.rs");
+            include!("stader.types.v1.mod.rs");
             // @@protoc_insertion_point(stader.types.v1)
         }
     }

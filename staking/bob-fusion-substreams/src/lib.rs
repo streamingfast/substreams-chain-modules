@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::bob_fusion::types::v1::{
-    Events, FusionLockDeposit, FusionLockWithdrawToL1, FusionLockWithdrawToL2,
-};
+use crate::pb::bob_fusion::types::v1::{Events, FusionLockDeposit, FusionLockWithdrawToL1, FusionLockWithdrawToL2};
 
 const FUSION_LOCK: [u8; 20] = hex_literal::hex!("61dc14b28d4dbcd6cf887e9b72018b9da1ce6ff7");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == FUSION_LOCK.as_slice() {
-                if let Some(ev) =
-                    abi::fusion_lock::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::fusion_lock::events::Deposit::match_and_decode(log) {
                     events.fusion_lock_deposits.push(FusionLockDeposit {
                         id: id.clone(),
                         deposit_owner: fmt_addr(&ev.deposit_owner),
@@ -53,9 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::fusion_lock::events::WithdrawToL1::match_and_decode(log)
-                {
+                if let Some(ev) = abi::fusion_lock::events::WithdrawToL1::match_and_decode(log) {
                     events.fusion_lock_withdraw_to_l1s.push(FusionLockWithdrawToL1 {
                         id: id.clone(),
                         owner: fmt_addr(&ev.owner),
@@ -68,9 +60,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::fusion_lock::events::WithdrawToL2::match_and_decode(log)
-                {
+                if let Some(ev) = abi::fusion_lock::events::WithdrawToL2::match_and_decode(log) {
                     events.fusion_lock_withdraw_to_l2s.push(FusionLockWithdrawToL2 {
                         id: id.clone(),
                         owner: fmt_addr(&ev.owner),
@@ -86,7 +76,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

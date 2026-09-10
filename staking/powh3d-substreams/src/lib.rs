@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,7 +10,8 @@ use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
 use crate::pb::powh3d::types::v1::{
-    Events, HourglassOnReinvestment, HourglassOnTokenPurchase, HourglassOnTokenSell, HourglassOnWithdraw, HourglassTransfer,
+    Events, HourglassOnReinvestment, HourglassOnTokenPurchase, HourglassOnTokenSell, HourglassOnWithdraw,
+    HourglassTransfer,
 };
 
 const HOURGLASS: [u8; 20] = hex_literal::hex!("b3775fb83f7d12a36e0475abdd1fca35c091efbe");
@@ -18,11 +21,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +36,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == HOURGLASS.as_slice() {
-                if let Some(ev) =
-                    abi::hourglass::events::OnTokenPurchase::match_and_decode(log)
-                {
+                if let Some(ev) = abi::hourglass::events::OnTokenPurchase::match_and_decode(log) {
                     events.hourglass_on_token_purchases.push(HourglassOnTokenPurchase {
                         id: id.clone(),
                         customer_address: fmt_addr(&ev.customer_address),
@@ -53,9 +50,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::hourglass::events::OnTokenSell::match_and_decode(log)
-                {
+                if let Some(ev) = abi::hourglass::events::OnTokenSell::match_and_decode(log) {
                     events.hourglass_on_token_sells.push(HourglassOnTokenSell {
                         id: id.clone(),
                         customer_address: fmt_addr(&ev.customer_address),
@@ -68,9 +63,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::hourglass::events::OnReinvestment::match_and_decode(log)
-                {
+                if let Some(ev) = abi::hourglass::events::OnReinvestment::match_and_decode(log) {
                     events.hourglass_on_reinvestments.push(HourglassOnReinvestment {
                         id: id.clone(),
                         customer_address: fmt_addr(&ev.customer_address),
@@ -83,9 +76,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::hourglass::events::OnWithdraw::match_and_decode(log)
-                {
+                if let Some(ev) = abi::hourglass::events::OnWithdraw::match_and_decode(log) {
                     events.hourglass_on_withdraws.push(HourglassOnWithdraw {
                         id: id.clone(),
                         customer_address: fmt_addr(&ev.customer_address),
@@ -97,9 +88,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::hourglass::events::Transfer::match_and_decode(log)
-                {
+                if let Some(ev) = abi::hourglass::events::Transfer::match_and_decode(log) {
                     events.hourglass_transfers.push(HourglassTransfer {
                         id: id.clone(),
                         from: fmt_addr(&ev.from),
@@ -113,7 +102,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

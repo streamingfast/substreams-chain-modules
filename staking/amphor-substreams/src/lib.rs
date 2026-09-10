@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::amphor::types::v1::{
-    Events, LrtVaultDeposit, LrtVaultWithdraw,
-};
+use crate::pb::amphor::types::v1::{Events, LrtVaultDeposit, LrtVaultWithdraw};
 
 const LRT_VAULT: [u8; 20] = hex_literal::hex!("06824c27c8a0dbde5f72f770ec82e3c0fd4dcec3");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == LRT_VAULT.as_slice() {
-                if let Some(ev) =
-                    abi::lrt_vault::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lrt_vault::events::Deposit::match_and_decode(log) {
                     events.lrt_vault_deposits.push(LrtVaultDeposit {
                         id: id.clone(),
                         sender: fmt_addr(&ev.sender),
@@ -53,9 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::lrt_vault::events::Withdraw::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lrt_vault::events::Withdraw::match_and_decode(log) {
                     events.lrt_vault_withdraws.push(LrtVaultWithdraw {
                         id: id.clone(),
                         sender: fmt_addr(&ev.sender),
@@ -71,7 +63,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,7 +10,8 @@ use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
 use crate::pb::slisbnb::types::v1::{
-    Events, ListaStakeManagerClaimWithdrawal, ListaStakeManagerDeposit, ListaStakeManagerRequestWithdraw, ListaStakeManagerRewardsCompounded,
+    Events, ListaStakeManagerClaimWithdrawal, ListaStakeManagerDeposit, ListaStakeManagerRequestWithdraw,
+    ListaStakeManagerRewardsCompounded,
 };
 
 const LISTA_STAKE_MANAGER: [u8; 20] = hex_literal::hex!("1adb950d8bb3da4be104211d5ab038628e477fe6");
@@ -18,11 +21,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +36,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == LISTA_STAKE_MANAGER.as_slice() {
-                if let Some(ev) =
-                    abi::lista_stake_manager::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lista_stake_manager::events::Deposit::match_and_decode(log) {
                     events.lista_stake_manager_deposits.push(ListaStakeManagerDeposit {
                         id: id.clone(),
                         src: fmt_addr(&ev.src),
@@ -51,50 +48,49 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::lista_stake_manager::events::RequestWithdraw::match_and_decode(log)
-                {
-                    events.lista_stake_manager_request_withdraws.push(ListaStakeManagerRequestWithdraw {
-                        id: id.clone(),
-                        account: fmt_addr(&ev.account),
-                        amount_in_slis_bnb: ev.amount_in_slis_bnb.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::lista_stake_manager::events::RequestWithdraw::match_and_decode(log) {
+                    events
+                        .lista_stake_manager_request_withdraws
+                        .push(ListaStakeManagerRequestWithdraw {
+                            id: id.clone(),
+                            account: fmt_addr(&ev.account),
+                            amount_in_slis_bnb: ev.amount_in_slis_bnb.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::lista_stake_manager::events::ClaimWithdrawal::match_and_decode(log)
-                {
-                    events.lista_stake_manager_claim_withdrawals.push(ListaStakeManagerClaimWithdrawal {
-                        id: id.clone(),
-                        account: fmt_addr(&ev.account),
-                        idx: ev.idx.to_string(),
-                        amount: ev.amount.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::lista_stake_manager::events::ClaimWithdrawal::match_and_decode(log) {
+                    events
+                        .lista_stake_manager_claim_withdrawals
+                        .push(ListaStakeManagerClaimWithdrawal {
+                            id: id.clone(),
+                            account: fmt_addr(&ev.account),
+                            idx: ev.idx.to_string(),
+                            amount: ev.amount.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::lista_stake_manager::events::RewardsCompounded::match_and_decode(log)
-                {
-                    events.lista_stake_manager_rewards_compoundeds.push(ListaStakeManagerRewardsCompounded {
-                        id: id.clone(),
-                        amount: ev.amount.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::lista_stake_manager::events::RewardsCompounded::match_and_decode(log) {
+                    events
+                        .lista_stake_manager_rewards_compoundeds
+                        .push(ListaStakeManagerRewardsCompounded {
+                            id: id.clone(),
+                            amount: ev.amount.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
-
         }
     }
 

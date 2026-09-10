@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::gudchain::types::v1::{
-    Events, VaultV1Deposit, VaultV1Withdraw,
-};
+use crate::pb::gudchain::types::v1::{Events, VaultV1Deposit, VaultV1Withdraw};
 
 const VAULT_V1: [u8; 20] = hex_literal::hex!("d759e176def0f14e5c2d300238d41b1cbb5585bf");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == VAULT_V1.as_slice() {
-                if let Some(ev) =
-                    abi::vault_v1::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::vault_v1::events::Deposit::match_and_decode(log) {
                     events.vault_v1_deposits.push(VaultV1Deposit {
                         id: id.clone(),
                         token: fmt_addr(&ev.token),
@@ -53,9 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::vault_v1::events::Withdraw::match_and_decode(log)
-                {
+                if let Some(ev) = abi::vault_v1::events::Withdraw::match_and_decode(log) {
                     events.vault_v1_withdraws.push(VaultV1Withdraw {
                         id: id.clone(),
                         token: fmt_addr(&ev.token),
@@ -70,7 +62,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

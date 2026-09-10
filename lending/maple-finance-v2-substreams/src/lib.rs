@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -9,27 +11,18 @@ use substreams_ethereum::Event;
 
 use crate::pb::maple::types::v1::{Events, InstanceDeployed, LoanAddedToTransitionLoanManager};
 
-const POOL_MANAGER_FACTORY: [u8; 20] =
-    hex_literal::hex!("e463cd473ecc1d1a4ecf20b62624d84dd20a8339");
-const MAPLE_LOAN_FACTORY: [u8; 20] =
-    hex_literal::hex!("36a7350309b2eb30f3b908ab0154851b5ed81db0");
-const LOAN_MANAGER_FACTORY: [u8; 20] =
-    hex_literal::hex!("1551717ae4fdcb65ed028f7fb7aba39908f6a7a6");
-const LIQUIDATOR_FACTORY: [u8; 20] =
-    hex_literal::hex!("a2091116649b070d2a27fc5c85c9820302114c63");
-const MIGRATION_HELPER: [u8; 20] =
-    hex_literal::hex!("580b1a894b9fbdbf7d29ba9b492807bf539dd508");
+const POOL_MANAGER_FACTORY: [u8; 20] = hex_literal::hex!("e463cd473ecc1d1a4ecf20b62624d84dd20a8339");
+const MAPLE_LOAN_FACTORY: [u8; 20] = hex_literal::hex!("36a7350309b2eb30f3b908ab0154851b5ed81db0");
+const LOAN_MANAGER_FACTORY: [u8; 20] = hex_literal::hex!("1551717ae4fdcb65ed028f7fb7aba39908f6a7a6");
+const LIQUIDATOR_FACTORY: [u8; 20] = hex_literal::hex!("a2091116649b070d2a27fc5c85c9820302114c63");
+const MIGRATION_HELPER: [u8; 20] = hex_literal::hex!("580b1a894b9fbdbf7d29ba9b492807bf539dd508");
 
 fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -56,9 +49,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             };
 
             if !factory_type.is_empty() {
-                if let Some(ev) =
-                    abi::contract_factory::events::InstanceDeployed::match_and_decode(log)
-                {
+                if let Some(ev) = abi::contract_factory::events::InstanceDeployed::match_and_decode(log) {
                     events.instances_deployed.push(InstanceDeployed {
                         id,
                         version: ev.version.to_string(),
@@ -74,8 +65,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == MIGRATION_HELPER {
-                if let Some(ev) =
-                    abi::migration_helper::events::LoanAddedToTransitionLoanManager::match_and_decode(log)
+                if let Some(ev) = abi::migration_helper::events::LoanAddedToTransitionLoanManager::match_and_decode(log)
                 {
                     events.loans_added_to_transition.push(LoanAddedToTransitionLoanManager {
                         id,

@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -20,11 +22,7 @@ fn fmt_bytes32(b: &[u8; 32]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -42,9 +40,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
 
             let id = format!("{}-{}", tx_hash, log.index);
 
-            if let Some(ev) =
-                abi::seaport_exchange::events::OrderFulfilled::match_and_decode(log)
-            {
+            if let Some(ev) = abi::seaport_exchange::events::OrderFulfilled::match_and_decode(log) {
                 let offer = ev
                     .offer
                     .iter()

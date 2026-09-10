@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,7 +10,8 @@ use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
 use crate::pb::euler_finance::types::v1::{
-    Events, EulStakesStake, EulerAssetStatus, EulerBorrow, EulerDeposit, EulerGovConvertReserves, EulerGovSetPricingConfig, EulerGovSetReserveFee, EulerLiquidation, EulerMarketActivated, EulerRepay, EulerWithdraw,
+    EulStakesStake, EulerAssetStatus, EulerBorrow, EulerDeposit, EulerGovConvertReserves, EulerGovSetPricingConfig,
+    EulerGovSetReserveFee, EulerLiquidation, EulerMarketActivated, EulerRepay, EulerWithdraw, Events,
 };
 
 const EULER: [u8; 20] = hex_literal::hex!("27182842e098f60e3d576794a5bffb0777e025d3");
@@ -19,11 +22,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -38,9 +37,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == EULER.as_slice() {
-                if let Some(ev) =
-                    abi::euler::events::AssetStatus::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::AssetStatus::match_and_decode(log) {
                     events.euler_asset_statuss.push(EulerAssetStatus {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -58,9 +55,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::Borrow::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::Borrow::match_and_decode(log) {
                     events.euler_borrows.push(EulerBorrow {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -73,9 +68,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::Deposit::match_and_decode(log) {
                     events.euler_deposits.push(EulerDeposit {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -88,9 +81,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::GovConvertReserves::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::GovConvertReserves::match_and_decode(log) {
                     events.euler_gov_convert_reservess.push(EulerGovConvertReserves {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -103,9 +94,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::GovSetReserveFee::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::GovSetReserveFee::match_and_decode(log) {
                     events.euler_gov_set_reserve_fees.push(EulerGovSetReserveFee {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -117,9 +106,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::GovSetPricingConfig::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::GovSetPricingConfig::match_and_decode(log) {
                     events.euler_gov_set_pricing_configs.push(EulerGovSetPricingConfig {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -132,9 +119,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::Liquidation::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::Liquidation::match_and_decode(log) {
                     events.euler_liquidations.push(EulerLiquidation {
                         id: id.clone(),
                         liquidator: fmt_addr(&ev.liquidator),
@@ -153,9 +138,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::MarketActivated::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::MarketActivated::match_and_decode(log) {
                     events.euler_market_activateds.push(EulerMarketActivated {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -168,9 +151,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::Repay::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::Repay::match_and_decode(log) {
                     events.euler_repays.push(EulerRepay {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -183,9 +164,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::euler::events::Withdraw::match_and_decode(log)
-                {
+                if let Some(ev) = abi::euler::events::Withdraw::match_and_decode(log) {
                     events.euler_withdraws.push(EulerWithdraw {
                         id: id.clone(),
                         underlying: fmt_addr(&ev.underlying),
@@ -201,9 +180,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address() == EUL_STAKES.as_slice() {
-                if let Some(ev) =
-                    abi::eul_stakes::events::Stake::match_and_decode(log)
-                {
+                if let Some(ev) = abi::eul_stakes::events::Stake::match_and_decode(log) {
                     events.eul_stakes_stakes.push(EulStakesStake {
                         id: id.clone(),
                         who: fmt_addr(&ev.who),
@@ -218,7 +195,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

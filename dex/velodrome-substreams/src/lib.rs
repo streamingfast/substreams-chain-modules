@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -14,11 +16,7 @@ use crate::pb::velodrome::types::v1::{Events, LiquidityEvent, Pool, Pools, Swap}
 const POOL_FACTORY: [u8; 20] = hex_literal::hex!("F1046053aa5682b4F9a81b5481394DA16BE5FF5a");
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]

@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::deq::types::v1::{
-    Events, StakedAvailTransfer,
-};
+use crate::pb::deq::types::v1::{Events, StakedAvailTransfer};
 
 const STAKED_AVAIL: [u8; 20] = hex_literal::hex!("3742f3fcc56b2d46c7b8ca77c23be60cd43ca80a");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == STAKED_AVAIL.as_slice() {
-                if let Some(ev) =
-                    abi::staked_avail::events::Transfer::match_and_decode(log)
-                {
+                if let Some(ev) = abi::staked_avail::events::Transfer::match_and_decode(log) {
                     events.staked_avail_transfers.push(StakedAvailTransfer {
                         id: id.clone(),
                         from: fmt_addr(&ev.from),
@@ -53,7 +47,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

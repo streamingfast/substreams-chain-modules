@@ -1,5 +1,7 @@
 mod basis;
 mod chainlink;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 mod price;
 mod quality;

@@ -907,7 +907,7 @@ pub fn decode_block(
 
             if let Some(event) = abi::governance::events::CfAv1LiquidationPeriodChanged::match_and_decode(log) {
                 if gov_addrs.get_last(&contract).is_some() || local_gov.contains(&contract) {
-                    out.cfav1_liquidation_period_changed_events.push(sf::CfAv1LiquidationPeriodChangedEvent {
+                    out.cfav1_liquidation_period_changed_events.push(sf::CFAv1LiquidationPeriodChangedEvent {
                         id: id.clone(),
                         block_number: meta.number,
                         block_timestamp: meta.timestamp,
@@ -926,7 +926,7 @@ pub fn decode_block(
 
             if let Some(event) = abi::governance::events::PppConfigurationChanged::match_and_decode(log) {
                 if gov_addrs.get_last(&contract).is_some() || local_gov.contains(&contract) {
-                    out.pppconfiguration_changed_events.push(sf::PppConfigurationChangedEvent {
+                    out.pppconfiguration_changed_events.push(sf::PPPConfigurationChangedEvent {
                         id: id.clone(),
                         block_number: meta.number,
                         block_timestamp: meta.timestamp,
@@ -985,7 +985,7 @@ pub fn decode_block(
 
             if let Some(event) = abi::toga::events::NewPic::match_and_decode(log) {
                 if is_fixed(&contract, TOGA) {
-                    out.new_pic_events.push(sf::NewPicEvent {
+                    out.new_pic_events.push(sf::NewPICEvent {
                         id: id.clone(),
                         block_number: meta.number,
                         block_timestamp: meta.timestamp,

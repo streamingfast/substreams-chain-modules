@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -16,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -38,9 +36,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
 
             let id = format!("{}-{}", tx_hash, log.index);
 
-            if let Some(ev) =
-                abi::rocket_token_reth::events::EtherDeposited::match_and_decode(log)
-            {
+            if let Some(ev) = abi::rocket_token_reth::events::EtherDeposited::match_and_decode(log) {
                 events.ether_deposited.push(EtherDeposited {
                     id,
                     from: fmt_addr(&ev.from),
@@ -54,9 +50,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::rocket_token_reth::events::TokensMinted::match_and_decode(log)
-            {
+            if let Some(ev) = abi::rocket_token_reth::events::TokensMinted::match_and_decode(log) {
                 events.tokens_minted.push(TokensMinted {
                     id,
                     to: fmt_addr(&ev.to),
@@ -71,9 +65,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::rocket_token_reth::events::TokensBurned::match_and_decode(log)
-            {
+            if let Some(ev) = abi::rocket_token_reth::events::TokensBurned::match_and_decode(log) {
                 events.tokens_burned.push(TokensBurned {
                     id,
                     from: fmt_addr(&ev.from),

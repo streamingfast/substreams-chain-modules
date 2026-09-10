@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,19 +10,16 @@ use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
 use crate::pb::liquity::types::v1::{
-    ActivePoolEthBalanceUpdated, ActivePoolLusdDebtUpdated, CollBalanceUpdated, EthGainWithdrawn,
-    Events, LastGoodPriceUpdated, Liquidation, LusdBorrowingFeePaid, Redemption,
-    StabilityPoolEthBalanceUpdated, StabilityPoolLusdBalanceUpdated, TroveLiquidated, TroveUpdated,
-    UserDepositChanged,
+    ActivePoolEthBalanceUpdated, ActivePoolLusdDebtUpdated, CollBalanceUpdated, EthGainWithdrawn, Events,
+    LastGoodPriceUpdated, Liquidation, LusdBorrowingFeePaid, Redemption, StabilityPoolEthBalanceUpdated,
+    StabilityPoolLusdBalanceUpdated, TroveLiquidated, TroveUpdated, UserDepositChanged,
 };
 
 const TROVE_MANAGER: [u8; 20] = hex_literal::hex!("a39739ef8b0231dbfa0dcda07d7e29faabcf4bb2");
-const BORROWER_OPERATIONS: [u8; 20] =
-    hex_literal::hex!("24179cd81c9e782a4096035f7ec97fb8b783e007");
+const BORROWER_OPERATIONS: [u8; 20] = hex_literal::hex!("24179cd81c9e782a4096035f7ec97fb8b783e007");
 const PRICE_FEED: [u8; 20] = hex_literal::hex!("4c517d4e2c851ca76d7ec94b805269df0f2201de");
 const ACTIVE_POOL: [u8; 20] = hex_literal::hex!("df9eb223bafbe5c5271415c75aecd68c21fe3d7f");
-const COLL_SURPLUS_POOL: [u8; 20] =
-    hex_literal::hex!("3d32e8b97ed5881324241cf03b2da5e2ebce5521");
+const COLL_SURPLUS_POOL: [u8; 20] = hex_literal::hex!("3d32e8b97ed5881324241cf03b2da5e2ebce5521");
 const STABILITY_POOL: [u8; 20] = hex_literal::hex!("66017d22b0f8556afdd19fc67041899eb65a21bb");
 
 fn fmt_addr(addr: &[u8]) -> String {
@@ -28,11 +27,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -47,9 +42,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index);
 
             if log.address == TROVE_MANAGER {
-                if let Some(ev) =
-                    abi::trove_manager::events::TroveUpdated::match_and_decode(log)
-                {
+                if let Some(ev) = abi::trove_manager::events::TroveUpdated::match_and_decode(log) {
                     events.trove_updated.push(TroveUpdated {
                         id: id.clone(),
                         borrower: fmt_addr(&ev.borrower),
@@ -65,9 +58,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::trove_manager::events::TroveLiquidated::match_and_decode(log)
-                {
+                if let Some(ev) = abi::trove_manager::events::TroveLiquidated::match_and_decode(log) {
                     events.trove_liquidated.push(TroveLiquidated {
                         id: id.clone(),
                         borrower: fmt_addr(&ev.borrower),
@@ -113,9 +104,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == BORROWER_OPERATIONS {
-                if let Some(ev) =
-                    abi::borrower_operations::events::LusdBorrowingFeePaid::match_and_decode(log)
-                {
+                if let Some(ev) = abi::borrower_operations::events::LusdBorrowingFeePaid::match_and_decode(log) {
                     events.lusd_borrowing_fee_paid.push(LusdBorrowingFeePaid {
                         id: id.clone(),
                         borrower: fmt_addr(&ev.borrower),
@@ -127,9 +116,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::borrower_operations::events::TroveUpdated::match_and_decode(log)
-                {
+                if let Some(ev) = abi::borrower_operations::events::TroveUpdated::match_and_decode(log) {
                     events.trove_updated.push(TroveUpdated {
                         id: id.clone(),
                         borrower: fmt_addr(&ev.borrower),
@@ -149,9 +136,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == PRICE_FEED {
-                if let Some(ev) =
-                    abi::price_feed::events::LastGoodPriceUpdated::match_and_decode(log)
-                {
+                if let Some(ev) = abi::price_feed::events::LastGoodPriceUpdated::match_and_decode(log) {
                     events.last_good_price_updated.push(LastGoodPriceUpdated {
                         id: id.clone(),
                         price: ev.last_good_price.to_string(),
@@ -165,9 +150,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == ACTIVE_POOL {
-                if let Some(ev) =
-                    abi::active_pool::events::ActivePoolEthBalanceUpdated::match_and_decode(log)
-                {
+                if let Some(ev) = abi::active_pool::events::ActivePoolEthBalanceUpdated::match_and_decode(log) {
                     events
                         .active_pool_eth_balance_updated
                         .push(ActivePoolEthBalanceUpdated {
@@ -180,27 +163,21 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::active_pool::events::ActivePoolLusdDebtUpdated::match_and_decode(log)
-                {
-                    events
-                        .active_pool_lusd_debt_updated
-                        .push(ActivePoolLusdDebtUpdated {
-                            id: id.clone(),
-                            lusd_debt: ev.lusd_debt.to_string(),
-                            tx_hash: tx_hash.clone(),
-                            log_index: log.index as u64,
-                            block_num: block.number,
-                            timestamp,
-                        });
+                if let Some(ev) = abi::active_pool::events::ActivePoolLusdDebtUpdated::match_and_decode(log) {
+                    events.active_pool_lusd_debt_updated.push(ActivePoolLusdDebtUpdated {
+                        id: id.clone(),
+                        lusd_debt: ev.lusd_debt.to_string(),
+                        tx_hash: tx_hash.clone(),
+                        log_index: log.index as u64,
+                        block_num: block.number,
+                        timestamp,
+                    });
                 }
                 continue;
             }
 
             if log.address == COLL_SURPLUS_POOL {
-                if let Some(ev) =
-                    abi::coll_surplus_pool::events::CollBalanceUpdated::match_and_decode(log)
-                {
+                if let Some(ev) = abi::coll_surplus_pool::events::CollBalanceUpdated::match_and_decode(log) {
                     events.coll_balance_updated.push(CollBalanceUpdated {
                         id: id.clone(),
                         account: fmt_addr(&ev.account),
@@ -215,9 +192,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == STABILITY_POOL {
-                if let Some(ev) =
-                    abi::stability_pool::events::EthGainWithdrawn::match_and_decode(log)
-                {
+                if let Some(ev) = abi::stability_pool::events::EthGainWithdrawn::match_and_decode(log) {
                     events.eth_gain_withdrawn.push(EthGainWithdrawn {
                         id: id.clone(),
                         depositor: fmt_addr(&ev.depositor),
@@ -230,11 +205,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::stability_pool::events::StabilityPoolEthBalanceUpdated::match_and_decode(
-                        log,
-                    )
-                {
+                if let Some(ev) = abi::stability_pool::events::StabilityPoolEthBalanceUpdated::match_and_decode(log) {
                     events
                         .stability_pool_eth_balance_updated
                         .push(StabilityPoolEthBalanceUpdated {
@@ -247,11 +218,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::stability_pool::events::StabilityPoolLusdBalanceUpdated::match_and_decode(
-                        log,
-                    )
-                {
+                if let Some(ev) = abi::stability_pool::events::StabilityPoolLusdBalanceUpdated::match_and_decode(log) {
                     events
                         .stability_pool_lusd_balance_updated
                         .push(StabilityPoolLusdBalanceUpdated {
@@ -264,9 +231,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::stability_pool::events::UserDepositChanged::match_and_decode(log)
-                {
+                if let Some(ev) = abi::stability_pool::events::UserDepositChanged::match_and_decode(log) {
                     events.user_deposit_changed.push(UserDepositChanged {
                         id: id.clone(),
                         depositor: fmt_addr(&ev.depositor),

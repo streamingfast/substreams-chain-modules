@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::m0_power::types::v1::{
-    Events, MinterCollateralUpdated,
-};
+use crate::pb::m0_power::types::v1::{Events, MinterCollateralUpdated};
 
 const MINTER: [u8; 20] = hex_literal::hex!("f7f9638cb444d65e5a40bf5ff98ebe4ff319f04e");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == MINTER.as_slice() {
-                if let Some(ev) =
-                    abi::minter::events::CollateralUpdated::match_and_decode(log)
-                {
+                if let Some(ev) = abi::minter::events::CollateralUpdated::match_and_decode(log) {
                     events.minter_collateral_updateds.push(MinterCollateralUpdated {
                         id: id.clone(),
                         minter: fmt_addr(&ev.minter),
@@ -55,7 +49,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 
@@ -71,7 +64,10 @@ pub fn db_out(events: Events) -> Result<DatabaseChanges, Error> {
             .create_row("minter_collateral_updated", &e.id)
             .set("minter", &e.minter)
             .set("collateral", &e.collateral)
-            .set("total_resolved_collateral_retrieval", &e.total_resolved_collateral_retrieval)
+            .set(
+                "total_resolved_collateral_retrieval",
+                &e.total_resolved_collateral_retrieval,
+            )
             .set("metadata_hash", &e.metadata_hash)
             .set("evt_timestamp", &e.evt_timestamp)
             .set("tx_hash", &e.tx_hash)

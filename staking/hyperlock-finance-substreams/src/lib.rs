@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,7 +10,8 @@ use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
 use crate::pb::hyperlock_finance::types::v1::{
-    Events, Erc20PointsDepositStake, Erc20PointsDepositUnstake, Erc721PointsDepositDeposit, Erc721PointsDepositWithdraw, ThrusterPointNftDecreaseLiquidity, ThrusterPointNftIncreaseLiquidity,
+    Erc20PointsDepositStake, Erc20PointsDepositUnstake, Erc721PointsDepositDeposit, Erc721PointsDepositWithdraw,
+    Events, ThrusterPointNftDecreaseLiquidity, ThrusterPointNftIncreaseLiquidity,
 };
 
 const THRUSTER_POINT_NFT: [u8; 20] = hex_literal::hex!("434575eaea081b735c985fa9bf63cd7b87e227f9");
@@ -20,11 +23,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -39,50 +38,48 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == THRUSTER_POINT_NFT.as_slice() {
-                if let Some(ev) =
-                    abi::thruster_point_nft::events::IncreaseLiquidity::match_and_decode(log)
-                {
-                    events.thruster_point_nft_increase_liquiditys.push(ThrusterPointNftIncreaseLiquidity {
-                        id: id.clone(),
-                        token_id: ev.token_id.to_string(),
-                        liquidity: ev.liquidity.to_string(),
-                        amount0: ev.amount0.to_string(),
-                        amount1: ev.amount1.to_string(),
-                        tick_lower: ev.tick_lower.to_string(),
-                        tick_upper: ev.tick_upper.to_string(),
-                        pool: fmt_addr(&ev.pool),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::thruster_point_nft::events::IncreaseLiquidity::match_and_decode(log) {
+                    events
+                        .thruster_point_nft_increase_liquiditys
+                        .push(ThrusterPointNftIncreaseLiquidity {
+                            id: id.clone(),
+                            token_id: ev.token_id.to_string(),
+                            liquidity: ev.liquidity.to_string(),
+                            amount0: ev.amount0.to_string(),
+                            amount1: ev.amount1.to_string(),
+                            tick_lower: ev.tick_lower.to_string(),
+                            tick_upper: ev.tick_upper.to_string(),
+                            pool: fmt_addr(&ev.pool),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::thruster_point_nft::events::DecreaseLiquidity::match_and_decode(log)
-                {
-                    events.thruster_point_nft_decrease_liquiditys.push(ThrusterPointNftDecreaseLiquidity {
-                        id: id.clone(),
-                        token_id: ev.token_id.to_string(),
-                        liquidity: ev.liquidity.to_string(),
-                        amount0: ev.amount0.to_string(),
-                        amount1: ev.amount1.to_string(),
-                        tick_lower: ev.tick_lower.to_string(),
-                        tick_upper: ev.tick_upper.to_string(),
-                        pool: fmt_addr(&ev.pool),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::thruster_point_nft::events::DecreaseLiquidity::match_and_decode(log) {
+                    events
+                        .thruster_point_nft_decrease_liquiditys
+                        .push(ThrusterPointNftDecreaseLiquidity {
+                            id: id.clone(),
+                            token_id: ev.token_id.to_string(),
+                            liquidity: ev.liquidity.to_string(),
+                            amount0: ev.amount0.to_string(),
+                            amount1: ev.amount1.to_string(),
+                            tick_lower: ev.tick_lower.to_string(),
+                            tick_upper: ev.tick_upper.to_string(),
+                            pool: fmt_addr(&ev.pool),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
 
             if log.address() == ERC20_POINTS_DEPOSIT.as_slice() {
-                if let Some(ev) =
-                    abi::erc20_points_deposit::events::Stake::match_and_decode(log)
-                {
+                if let Some(ev) = abi::erc20_points_deposit::events::Stake::match_and_decode(log) {
                     events.erc20_points_deposit_stakes.push(Erc20PointsDepositStake {
                         id: id.clone(),
                         lp_token: fmt_addr(&ev.lp_token),
@@ -95,9 +92,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::erc20_points_deposit::events::Unstake::match_and_decode(log)
-                {
+                if let Some(ev) = abi::erc20_points_deposit::events::Unstake::match_and_decode(log) {
                     events.erc20_points_deposit_unstakes.push(Erc20PointsDepositUnstake {
                         id: id.clone(),
                         lp_token: fmt_addr(&ev.lp_token),
@@ -113,9 +108,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address() == ERC721_POINTS_DEPOSIT.as_slice() {
-                if let Some(ev) =
-                    abi::erc721_points_deposit::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::erc721_points_deposit::events::Deposit::match_and_decode(log) {
                     events.erc721_points_deposit_deposits.push(Erc721PointsDepositDeposit {
                         id: id.clone(),
                         pool: fmt_addr(&ev.pool),
@@ -128,23 +121,22 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::erc721_points_deposit::events::Withdraw::match_and_decode(log)
-                {
-                    events.erc721_points_deposit_withdraws.push(Erc721PointsDepositWithdraw {
-                        id: id.clone(),
-                        pool: fmt_addr(&ev.pool),
-                        sender: fmt_addr(&ev.sender),
-                        token_id: ev.token_id.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::erc721_points_deposit::events::Withdraw::match_and_decode(log) {
+                    events
+                        .erc721_points_deposit_withdraws
+                        .push(Erc721PointsDepositWithdraw {
+                            id: id.clone(),
+                            pool: fmt_addr(&ev.pool),
+                            sender: fmt_addr(&ev.sender),
+                            token_id: ev.token_id.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
-
         }
     }
 

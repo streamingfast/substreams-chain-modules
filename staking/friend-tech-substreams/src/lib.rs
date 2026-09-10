@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::friend_tech::types::v1::{
-    Events, SharesTrade,
-};
+use crate::pb::friend_tech::types::v1::{Events, SharesTrade};
 
 const SHARES: [u8; 20] = hex_literal::hex!("cf205808ed36593aa40a44f10c7f7c2f67d4a4d4");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == SHARES.as_slice() {
-                if let Some(ev) =
-                    abi::shares::events::Trade::match_and_decode(log)
-                {
+                if let Some(ev) = abi::shares::events::Trade::match_and_decode(log) {
                     events.shares_trades.push(SharesTrade {
                         id: id.clone(),
                         trader: fmt_addr(&ev.trader),
@@ -58,7 +52,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

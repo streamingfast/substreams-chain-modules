@@ -1,10 +1,12 @@
 mod abi;
 mod decode;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams_ethereum::pb::eth::v2 as eth;
 
-use crate::pb::uniswap::v4 as v4;
+use crate::pb::uniswap::v4;
 
 substreams_ethereum::init!();
 

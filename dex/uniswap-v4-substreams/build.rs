@@ -30,8 +30,7 @@ fn main() -> Result<(), anyhow::Error> {
     fs::create_dir_all("src/abi")?;
 
     for (abi_path, out_path, name) in contracts {
-        let contents =
-            fs::read_to_string(abi_path).unwrap_or_else(|e| panic!("read {abi_path}: {e}"));
+        let contents = fs::read_to_string(abi_path).unwrap_or_else(|e| panic!("read {abi_path}: {e}"));
         let sanitized = sanitize_abi(&contents);
         Abigen::from_bytes(name, sanitized.as_bytes())?
             .generate()?

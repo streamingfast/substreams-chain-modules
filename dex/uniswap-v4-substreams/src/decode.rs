@@ -1,5 +1,5 @@
 use crate::abi;
-use crate::pb::uniswap::v4 as v4;
+use crate::pb::uniswap::v4;
 use substreams::errors::Error;
 use substreams::Hex;
 use substreams_ethereum::pb::eth::v2 as eth;
@@ -18,9 +18,9 @@ impl Config {
         let mut position_manager = None;
 
         for entry in params.split('&').filter(|e| !e.trim().is_empty()) {
-            let (key, value) = entry.split_once('=').ok_or_else(|| {
-                Error::msg(format!("invalid params entry {entry:?}, expected key=value"))
-            })?;
+            let (key, value) = entry
+                .split_once('=')
+                .ok_or_else(|| Error::msg(format!("invalid params entry {entry:?}, expected key=value")))?;
             match key.trim() {
                 "pool_manager" => pool_manager = Some(normalize_address(key, value)?),
                 "position_manager" => position_manager = Some(normalize_address(key, value)?),
@@ -29,8 +29,7 @@ impl Config {
         }
 
         Ok(Self {
-            pool_manager: pool_manager
-                .ok_or_else(|| Error::msg("missing required param 'pool_manager'"))?,
+            pool_manager: pool_manager.ok_or_else(|| Error::msg("missing required param 'pool_manager'"))?,
             position_manager: position_manager
                 .ok_or_else(|| Error::msg("missing required param 'position_manager'"))?,
         })
@@ -39,7 +38,11 @@ impl Config {
 
 /// Lowercase, un-prefixed hex, matching the encoding of `log.address`.
 fn normalize_address(key: &str, value: &str) -> Result<String, Error> {
-    let addr = value.trim().trim_start_matches("0x").trim_start_matches("0X").to_lowercase();
+    let addr = value
+        .trim()
+        .trim_start_matches("0x")
+        .trim_start_matches("0X")
+        .to_lowercase();
     if addr.len() != 40 || !addr.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err(Error::msg(format!(
             "invalid address {value:?} for param {key:?}, expected a 20-byte hex address"
@@ -126,8 +129,7 @@ pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
                 continue;
             }
 
-            if let Some(event) = abi::pool_manager::events::ModifyLiquidity::match_and_decode(log)
-            {
+            if let Some(event) = abi::pool_manager::events::ModifyLiquidity::match_and_decode(log) {
                 if contract == config.pool_manager {
                     out.modify_liquidity_events.push(v4::ModifyLiquidityEvent {
                         id: id.clone(),
@@ -167,29 +169,24 @@ pub fn decode_block(config: &Config, blk: &eth::Block) -> v4::Events {
                 continue;
             }
 
-            if let Some(event) =
-                abi::position_manager::events::Subscription::match_and_decode(log)
-            {
+            if let Some(event) = abi::position_manager::events::Subscription::match_and_decode(log) {
                 if contract == config.position_manager {
-                    out.position_subscription_events
-                        .push(v4::PositionSubscriptionEvent {
-                            id: id.clone(),
-                            block_number: meta.number,
-                            block_timestamp: meta.timestamp,
-                            transaction_hash: tx_hash.clone(),
-                            log_index,
-                            contract: contract.clone(),
-                            event_name: "Subscription".to_string(),
-                            token_id: event.token_id.to_string(),
-                            subscriber: hex::encode(&event.subscriber),
-                        });
+                    out.position_subscription_events.push(v4::PositionSubscriptionEvent {
+                        id: id.clone(),
+                        block_number: meta.number,
+                        block_timestamp: meta.timestamp,
+                        transaction_hash: tx_hash.clone(),
+                        log_index,
+                        contract: contract.clone(),
+                        event_name: "Subscription".to_string(),
+                        token_id: event.token_id.to_string(),
+                        subscriber: hex::encode(&event.subscriber),
+                    });
                 }
                 continue;
             }
 
-            if let Some(event) =
-                abi::position_manager::events::Unsubscription::match_and_decode(log)
-            {
+            if let Some(event) = abi::position_manager::events::Unsubscription::match_and_decode(log) {
                 if contract == config.position_manager {
                     out.position_unsubscription_events
                         .push(v4::PositionUnsubscriptionEvent {

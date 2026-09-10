@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -19,11 +21,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -38,9 +36,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == STAKING.as_slice() {
-                if let Some(ev) =
-                    abi::staking::events::Staked::match_and_decode(log)
-                {
+                if let Some(ev) = abi::staking::events::Staked::match_and_decode(log) {
                     events.staking_stakeds.push(StakingStaked {
                         id: id.clone(),
                         staker: fmt_addr(&ev.staker),
@@ -53,9 +49,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::staking::events::UnstakeRequested::match_and_decode(log)
-                {
+                if let Some(ev) = abi::staking::events::UnstakeRequested::match_and_decode(log) {
                     events.staking_unstake_requesteds.push(StakingUnstakeRequested {
                         id: id.clone(),
                         evt_id: ev.id.to_string(),
@@ -69,38 +63,37 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::staking::events::UnstakeRequestClaimed::match_and_decode(log)
-                {
-                    events.staking_unstake_request_claimeds.push(StakingUnstakeRequestClaimed {
-                        id: id.clone(),
-                        evt_id: ev.id.to_string(),
-                        staker: fmt_addr(&ev.staker),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::staking::events::UnstakeRequestClaimed::match_and_decode(log) {
+                    events
+                        .staking_unstake_request_claimeds
+                        .push(StakingUnstakeRequestClaimed {
+                            id: id.clone(),
+                            evt_id: ev.id.to_string(),
+                            staker: fmt_addr(&ev.staker),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
 
             if log.address() == RETURNS_AGGREGATOR.as_slice() {
-                if let Some(ev) =
-                    abi::returns_aggregator::events::FeesCollected::match_and_decode(log)
-                {
-                    events.returns_aggregator_fees_collecteds.push(ReturnsAggregatorFeesCollected {
-                        id: id.clone(),
-                        amount: ev.amount.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::returns_aggregator::events::FeesCollected::match_and_decode(log) {
+                    events
+                        .returns_aggregator_fees_collecteds
+                        .push(ReturnsAggregatorFeesCollected {
+                            id: id.clone(),
+                            amount: ev.amount.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
-
         }
     }
 

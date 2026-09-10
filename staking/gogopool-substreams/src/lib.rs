@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -18,11 +20,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +35,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == GGAVAX.as_slice() {
-                if let Some(ev) =
-                    abi::ggavax::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::ggavax::events::Deposit::match_and_decode(log) {
                     events.ggavax_deposits.push(GgavaxDeposit {
                         id: id.clone(),
                         caller: fmt_addr(&ev.caller),
@@ -53,9 +49,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::ggavax::events::DepositedFromStaking::match_and_decode(log)
-                {
+                if let Some(ev) = abi::ggavax::events::DepositedFromStaking::match_and_decode(log) {
                     events.ggavax_deposited_from_stakings.push(GgavaxDepositedFromStaking {
                         id: id.clone(),
                         caller: fmt_addr(&ev.caller),
@@ -68,9 +62,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::ggavax::events::Withdraw::match_and_decode(log)
-                {
+                if let Some(ev) = abi::ggavax::events::Withdraw::match_and_decode(log) {
                     events.ggavax_withdraws.push(GgavaxWithdraw {
                         id: id.clone(),
                         caller: fmt_addr(&ev.caller),
@@ -85,9 +77,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::ggavax::events::WithdrawnForStaking::match_and_decode(log)
-                {
+                if let Some(ev) = abi::ggavax::events::WithdrawnForStaking::match_and_decode(log) {
                     events.ggavax_withdrawn_for_stakings.push(GgavaxWithdrawnForStaking {
                         id: id.clone(),
                         caller: fmt_addr(&ev.caller),
@@ -99,9 +89,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::ggavax::events::NewRewardsCycle::match_and_decode(log)
-                {
+                if let Some(ev) = abi::ggavax::events::NewRewardsCycle::match_and_decode(log) {
                     events.ggavax_new_rewards_cycles.push(GgavaxNewRewardsCycle {
                         id: id.clone(),
                         cycle_end: ev.cycle_end.to_string(),
@@ -114,7 +102,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

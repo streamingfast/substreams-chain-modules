@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::klimadao::types::v1::{
-    Events, BctRedeemFeePaid, BctTransfer,
-};
+use crate::pb::klimadao::types::v1::{BctRedeemFeePaid, BctTransfer, Events};
 
 const BCT: [u8; 20] = hex_literal::hex!("2f800db0fdb5223b3c3f354886d907a671414a7f");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == BCT.as_slice() {
-                if let Some(ev) =
-                    abi::bct::events::Transfer::match_and_decode(log)
-                {
+                if let Some(ev) = abi::bct::events::Transfer::match_and_decode(log) {
                     events.bct_transfers.push(BctTransfer {
                         id: id.clone(),
                         from: fmt_addr(&ev.from),
@@ -52,9 +46,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::bct::events::RedeemFeePaid::match_and_decode(log)
-                {
+                if let Some(ev) = abi::bct::events::RedeemFeePaid::match_and_decode(log) {
                     events.bct_redeem_fee_paids.push(BctRedeemFeePaid {
                         id: id.clone(),
                         redeemer: fmt_addr(&ev.redeemer),
@@ -67,7 +59,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

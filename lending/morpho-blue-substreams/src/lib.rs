@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,19 +10,15 @@ use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
 use crate::pb::morpho_blue::types::v1::{
-    AccrueInterest, Borrow, Events, FlashLoan, Liquidate, MarketCreated, Repay, Supply,
-    SupplyCollateral, Withdraw, WithdrawCollateral,
+    AccrueInterest, Borrow, Events, FlashLoan, Liquidate, MarketCreated, Repay, Supply, SupplyCollateral, Withdraw,
+    WithdrawCollateral,
 };
 
 // MorphoBlue singleton on Ethereum mainnet — deployed block 18883124
 const MORPHO_BLUE: [u8; 20] = hex_literal::hex!("BBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb");
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 fn fmt_addr(addr: &[u8]) -> String {
@@ -46,9 +44,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
 
             let id = format!("{}-{}", tx_hash, log.index);
 
-            if let Some(ev) =
-                abi::morpho_blue::events::CreateMarket::match_and_decode(log)
-            {
+            if let Some(ev) = abi::morpho_blue::events::CreateMarket::match_and_decode(log) {
                 events.markets_created.push(MarketCreated {
                     id,
                     market_id: fmt_bytes32(&ev.id),
@@ -81,9 +77,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::morpho_blue::events::SupplyCollateral::match_and_decode(log)
-            {
+            if let Some(ev) = abi::morpho_blue::events::SupplyCollateral::match_and_decode(log) {
                 events.supply_collaterals.push(SupplyCollateral {
                     id,
                     market_id: fmt_bytes32(&ev.id),
@@ -148,9 +142,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::morpho_blue::events::WithdrawCollateral::match_and_decode(log)
-            {
+            if let Some(ev) = abi::morpho_blue::events::WithdrawCollateral::match_and_decode(log) {
                 events.withdraw_collaterals.push(WithdrawCollateral {
                     id,
                     market_id: fmt_bytes32(&ev.id),
@@ -185,9 +177,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::morpho_blue::events::AccrueInterest::match_and_decode(log)
-            {
+            if let Some(ev) = abi::morpho_blue::events::AccrueInterest::match_and_decode(log) {
                 events.accrued_interests.push(AccrueInterest {
                     id,
                     market_id: fmt_bytes32(&ev.id),

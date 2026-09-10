@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,24 +9,17 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::kelp::types::v1::{
-    AssetDeposit, AssetWithdrawalFinalized, AssetWithdrawalQueued, EthDeposit, Events,
-};
+use crate::pb::kelp::types::v1::{AssetDeposit, AssetWithdrawalFinalized, AssetWithdrawalQueued, EthDeposit, Events};
 
 const DEPOSIT_POOL: [u8; 20] = hex_literal::hex!("036676389e48133b63a802f8635ad39e752d375d");
-const WITHDRAWAL_MANAGER: [u8; 20] =
-    hex_literal::hex!("62de59c08eb5dae4b7e6f7a8cad3006d6965ec16");
+const WITHDRAWAL_MANAGER: [u8; 20] = hex_literal::hex!("62de59c08eb5dae4b7e6f7a8cad3006d6965ec16");
 
 fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -39,9 +34,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index);
 
             if log.address == DEPOSIT_POOL {
-                if let Some(ev) =
-                    abi::lrt_deposit_pool::events::AssetDeposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lrt_deposit_pool::events::AssetDeposit::match_and_decode(log) {
                     events.asset_deposits.push(AssetDeposit {
                         id,
                         depositor: fmt_addr(&ev.depositor),
@@ -57,9 +50,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) =
-                    abi::lrt_deposit_pool::events::EthDeposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lrt_deposit_pool::events::EthDeposit::match_and_decode(log) {
                     events.eth_deposits.push(EthDeposit {
                         id,
                         depositor: fmt_addr(&ev.depositor),
@@ -76,11 +67,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == WITHDRAWAL_MANAGER {
-                if let Some(ev) =
-                    abi::lrt_withdrawal_manager::events::AssetWithdrawalQueued::match_and_decode(
-                        log,
-                    )
-                {
+                if let Some(ev) = abi::lrt_withdrawal_manager::events::AssetWithdrawalQueued::match_and_decode(log) {
                     events.withdrawals_queued.push(AssetWithdrawalQueued {
                         id,
                         withdrawer: fmt_addr(&ev.withdrawer),
@@ -95,11 +82,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) =
-                    abi::lrt_withdrawal_manager::events::AssetWithdrawalFinalized::match_and_decode(
-                        log,
-                    )
-                {
+                if let Some(ev) = abi::lrt_withdrawal_manager::events::AssetWithdrawalFinalized::match_and_decode(log) {
                     events.withdrawals_finalized.push(AssetWithdrawalFinalized {
                         id,
                         withdrawer: fmt_addr(&ev.withdrawer),

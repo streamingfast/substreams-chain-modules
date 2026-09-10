@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::lybra_finance::types::v1::{
-    Events, LybraV1Burn, LybraV1FeeDistribution, LybraV1Mint,
-};
+use crate::pb::lybra_finance::types::v1::{Events, LybraV1Burn, LybraV1FeeDistribution, LybraV1Mint};
 
 const LYBRA_V1: [u8; 20] = hex_literal::hex!("97de57ec338ab5d51557da3434828c5dbfada371");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == LYBRA_V1.as_slice() {
-                if let Some(ev) =
-                    abi::lybra_v1::events::Mint::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lybra_v1::events::Mint::match_and_decode(log) {
                     events.lybra_v1_mints.push(LybraV1Mint {
                         id: id.clone(),
                         sponsor: fmt_addr(&ev.sponsor),
@@ -53,9 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::lybra_v1::events::Burn::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lybra_v1::events::Burn::match_and_decode(log) {
                     events.lybra_v1_burns.push(LybraV1Burn {
                         id: id.clone(),
                         sponsor: fmt_addr(&ev.sponsor),
@@ -69,9 +61,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::lybra_v1::events::FeeDistribution::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lybra_v1::events::FeeDistribution::match_and_decode(log) {
                     events.lybra_v1_fee_distributions.push(LybraV1FeeDistribution {
                         id: id.clone(),
                         fee_address: fmt_addr(&ev.fee_address),
@@ -85,7 +75,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

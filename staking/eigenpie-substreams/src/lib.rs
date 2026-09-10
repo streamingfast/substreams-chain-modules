@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,7 +10,7 @@ use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
 use crate::pb::eigenpie::types::v1::{
-    Events, EigenConfigAddedNewSupportedAsset, EigenConfigReceiptTokenUpdated, EigenStakingAssetDeposit,
+    EigenConfigAddedNewSupportedAsset, EigenConfigReceiptTokenUpdated, EigenStakingAssetDeposit, Events,
 };
 
 const EIGEN_CONFIG: [u8; 20] = hex_literal::hex!("20b70e4a1883b81429533fed944d7957121c7cab");
@@ -19,11 +21,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -38,41 +36,39 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == EIGEN_CONFIG.as_slice() {
-                if let Some(ev) =
-                    abi::eigen_config::events::AddedNewSupportedAsset::match_and_decode(log)
-                {
-                    events.eigen_config_added_new_supported_assets.push(EigenConfigAddedNewSupportedAsset {
-                        id: id.clone(),
-                        asset: fmt_addr(&ev.asset),
-                        receipt: fmt_addr(&ev.receipt),
-                        deposit_limit: ev.deposit_limit.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::eigen_config::events::AddedNewSupportedAsset::match_and_decode(log) {
+                    events
+                        .eigen_config_added_new_supported_assets
+                        .push(EigenConfigAddedNewSupportedAsset {
+                            id: id.clone(),
+                            asset: fmt_addr(&ev.asset),
+                            receipt: fmt_addr(&ev.receipt),
+                            deposit_limit: ev.deposit_limit.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::eigen_config::events::ReceiptTokenUpdated::match_and_decode(log)
-                {
-                    events.eigen_config_receipt_token_updateds.push(EigenConfigReceiptTokenUpdated {
-                        id: id.clone(),
-                        asset: fmt_addr(&ev.asset),
-                        receipt: fmt_addr(&ev.receipt),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::eigen_config::events::ReceiptTokenUpdated::match_and_decode(log) {
+                    events
+                        .eigen_config_receipt_token_updateds
+                        .push(EigenConfigReceiptTokenUpdated {
+                            id: id.clone(),
+                            asset: fmt_addr(&ev.asset),
+                            receipt: fmt_addr(&ev.receipt),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
 
             if log.address() == EIGEN_STAKING.as_slice() {
-                if let Some(ev) =
-                    abi::eigen_staking::events::AssetDeposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::eigen_staking::events::AssetDeposit::match_and_decode(log) {
                     events.eigen_staking_asset_deposits.push(EigenStakingAssetDeposit {
                         id: id.clone(),
                         depositor: fmt_addr(&ev.depositor),
@@ -87,7 +83,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

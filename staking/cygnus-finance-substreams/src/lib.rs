@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::cygnus_finance::types::v1::{
-    Events, CgusdInvested, CgusdSharesBurnt, CgusdSubmitted,
-};
+use crate::pb::cygnus_finance::types::v1::{CgusdInvested, CgusdSharesBurnt, CgusdSubmitted, Events};
 
 const CGUSD: [u8; 20] = hex_literal::hex!("ca72827a3d211cfd8f6b00ac98824872b72cab49");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == CGUSD.as_slice() {
-                if let Some(ev) =
-                    abi::cgusd::events::Invested::match_and_decode(log)
-                {
+                if let Some(ev) = abi::cgusd::events::Invested::match_and_decode(log) {
                     events.cgusd_investeds.push(CgusdInvested {
                         id: id.clone(),
                         amount: ev.amount.to_string(),
@@ -52,9 +46,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::cgusd::events::SharesBurnt::match_and_decode(log)
-                {
+                if let Some(ev) = abi::cgusd::events::SharesBurnt::match_and_decode(log) {
                     events.cgusd_shares_burnts.push(CgusdSharesBurnt {
                         id: id.clone(),
                         account: fmt_addr(&ev.account),
@@ -68,9 +60,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::cgusd::events::Submitted::match_and_decode(log)
-                {
+                if let Some(ev) = abi::cgusd::events::Submitted::match_and_decode(log) {
                     events.cgusd_submitteds.push(CgusdSubmitted {
                         id: id.clone(),
                         sender: fmt_addr(&ev.sender),
@@ -84,7 +74,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

@@ -1,4 +1,6 @@
 mod idl;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use pb::sf::solana::idl::v1::{DataSource, IdlAccountWrite, IdlAccountWrites, Source};
@@ -42,7 +44,7 @@ fn map_idl_accounts(block: AccountBlock) -> Result<IdlAccountWrites, Error> {
 
 fn collect_writes(block: &AccountBlock) -> IdlAccountWrites {
     let slot = block.slot;
-    let block_time = block.timestamp.as_ref().map(|t| t.seconds).unwrap_or(0);
+    let block_time = block.timestamp.seconds;
 
     // Per-block allowance, not per-account: without it a block carrying a dozen
     // bombs multiplies the per-payload ceiling by a dozen, which on wasm32 is
@@ -126,7 +128,7 @@ fn decode_legacy(account: &Account, mut write: IdlAccountWrite, allowance: &mut 
     // create_with_seed(base, "anchor:idl", program_id) takes the program as the owner,
     // so the account owner is the program the IDL describes.
     write.program_id = bs58::encode(&account.owner).into_string();
-    write.source = Source::Legacy as i32;
+    write.source = Source::Legacy.into();
     write.compression = 2; // legacy IDLs are always zlib
 
     let parsed = match idl::parse_legacy(&account.data) {
@@ -150,7 +152,7 @@ fn decode_legacy(account: &Account, mut write: IdlAccountWrite, allowance: &mut 
 }
 
 fn decode_metadata(account: &Account, mut write: IdlAccountWrite, allowance: &mut usize) -> IdlAccountWrite {
-    write.source = Source::ProgramMetadata as i32;
+    write.source = Source::ProgramMetadata.into();
 
     let m = match idl::parse_metadata(&account.data) {
         Ok(m) => m,
@@ -173,7 +175,7 @@ fn decode_metadata(account: &Account, mut write: IdlAccountWrite, allowance: &mu
     write.encoding = m.encoding;
     write.compression = m.compression;
     write.format = m.format;
-    write.data_source = m.data_source as i32;
+    write.data_source = (m.data_source as i32).into();
 
     // URL and External hold a pointer, not the document, so there is nothing to
     // decompress. Record the pointer and leave idl_json empty.

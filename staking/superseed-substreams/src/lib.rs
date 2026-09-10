@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::superseed::types::v1::{
-    Events, SuperSaleDepositTokensPurchase,
-};
+use crate::pb::superseed::types::v1::{Events, SuperSaleDepositTokensPurchase};
 
 const SUPER_SALE_DEPOSIT: [u8; 20] = hex_literal::hex!("cfd9cb8f15a9732bc449b05d97c29244de2259b2");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,24 +33,23 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == SUPER_SALE_DEPOSIT.as_slice() {
-                if let Some(ev) =
-                    abi::super_sale_deposit::events::TokensPurchase::match_and_decode(log)
-                {
-                    events.super_sale_deposit_tokens_purchases.push(SuperSaleDepositTokensPurchase {
-                        id: id.clone(),
-                        user: fmt_addr(&ev.user),
-                        deposited_amount: ev.deposited_amount.to_string(),
-                        purchased_tokens: ev.purchased_tokens.to_string(),
-                        total_funds_collected: ev.total_funds_collected.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::super_sale_deposit::events::TokensPurchase::match_and_decode(log) {
+                    events
+                        .super_sale_deposit_tokens_purchases
+                        .push(SuperSaleDepositTokensPurchase {
+                            id: id.clone(),
+                            user: fmt_addr(&ev.user),
+                            deposited_amount: ev.deposited_amount.to_string(),
+                            purchased_tokens: ev.purchased_tokens.to_string(),
+                            total_funds_collected: ev.total_funds_collected.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index() as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
-
         }
     }
 

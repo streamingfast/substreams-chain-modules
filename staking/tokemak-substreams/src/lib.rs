@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,9 +10,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::tokemak::types::v1::{
-    Events, ManagerPoolRegistered, RewardsClaimed, VaultWithdrawalRequested,
-};
+use crate::pb::tokemak::types::v1::{Events, ManagerPoolRegistered, RewardsClaimed, VaultWithdrawalRequested};
 
 const FACTORY: [u8; 20] = hex_literal::hex!("a86e412109f77c45a3bc1c5870b880492fb86a14");
 const REWARDS: [u8; 20] = hex_literal::hex!("79dd22579112d8a5f7347c5ed7e609e60da713c5");
@@ -21,11 +21,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::store]
@@ -33,9 +29,7 @@ pub fn store_pools(block: Block, store: StoreSetString) {
     for trx in block.transactions() {
         for log in trx.receipt().logs() {
             if log.address() == FACTORY.as_slice() {
-                if let Some(ev) =
-                    abi::manager::events::PoolRegistered::match_and_decode(log)
-                {
+                if let Some(ev) = abi::manager::events::PoolRegistered::match_and_decode(log) {
                     store.set(log.ordinal(), fmt_addr(&ev.pool), &"1".to_string());
                 }
             }
@@ -55,9 +49,7 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == FACTORY.as_slice() {
-                if let Some(ev) =
-                    abi::manager::events::PoolRegistered::match_and_decode(log)
-                {
+                if let Some(ev) = abi::manager::events::PoolRegistered::match_and_decode(log) {
                     events.manager_pool_registereds.push(ManagerPoolRegistered {
                         id: id.clone(),
                         pool: fmt_addr(&ev.pool),
@@ -72,9 +64,7 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
 
             if store.get_last(fmt_addr(log.address())).is_some() {
                 let pool = fmt_addr(log.address());
-                if let Some(ev) =
-                    abi::vault::events::WithdrawalRequested::match_and_decode(log)
-                {
+                if let Some(ev) = abi::vault::events::WithdrawalRequested::match_and_decode(log) {
                     events.vault_withdrawal_requesteds.push(VaultWithdrawalRequested {
                         id: id.clone(),
                         pool: pool.clone(),
@@ -90,9 +80,7 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
             }
 
             if log.address() == REWARDS.as_slice() {
-                if let Some(ev) =
-                    abi::rewards::events::Claimed::match_and_decode(log)
-                {
+                if let Some(ev) = abi::rewards::events::Claimed::match_and_decode(log) {
                     events.rewards_claimeds.push(RewardsClaimed {
                         id: id.clone(),
                         cycle: ev.cycle.to_string(),
@@ -107,9 +95,7 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                 }
             }
 
-            if log.address() == ON_CHAIN_VOTE.as_slice() {
-            }
-
+            if log.address() == ON_CHAIN_VOTE.as_slice() {}
         }
     }
 

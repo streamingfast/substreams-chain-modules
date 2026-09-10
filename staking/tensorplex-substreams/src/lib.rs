@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -7,9 +9,7 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::tensorplex::types::v1::{
-    Events, PlxtaoUserStake, PlxtaoUserUnstake, PlxtaoUserUnstakeRequested,
-};
+use crate::pb::tensorplex::types::v1::{Events, PlxtaoUserStake, PlxtaoUserUnstake, PlxtaoUserUnstakeRequested};
 
 const PLXTAO: [u8; 20] = hex_literal::hex!("b60acd2057067dc9ed8c083f5aa227a244044fd6");
 
@@ -18,11 +18,7 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 #[substreams::handlers::map]
@@ -37,9 +33,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             let id = format!("{}-{}", tx_hash, log.index());
 
             if log.address() == PLXTAO.as_slice() {
-                if let Some(ev) =
-                    abi::plxtao::events::UserStake::match_and_decode(log)
-                {
+                if let Some(ev) = abi::plxtao::events::UserStake::match_and_decode(log) {
                     events.plxtao_user_stakes.push(PlxtaoUserStake {
                         id: id.clone(),
                         user: fmt_addr(&ev.user),
@@ -53,9 +47,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::plxtao::events::UserUnstake::match_and_decode(log)
-                {
+                if let Some(ev) = abi::plxtao::events::UserUnstake::match_and_decode(log) {
                     events.plxtao_user_unstakes.push(PlxtaoUserUnstake {
                         id: id.clone(),
                         user: fmt_addr(&ev.user),
@@ -68,9 +60,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::plxtao::events::UserUnstakeRequested::match_and_decode(log)
-                {
+                if let Some(ev) = abi::plxtao::events::UserUnstakeRequested::match_and_decode(log) {
                     events.plxtao_user_unstake_requesteds.push(PlxtaoUserUnstakeRequested {
                         id: id.clone(),
                         user: fmt_addr(&ev.user),
@@ -87,7 +77,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

@@ -86,7 +86,7 @@ fn convert(swap: &Swap) -> Result<StockSwap, Skip> {
     let priced = swap.priced;
     let shares_known = !shares_ui.is_empty();
 
-    let meta = swap.meta.as_ref();
+    let meta = swap.meta.as_option();
     let mut row = StockSwap {
         block_num: meta.map(|m| m.block_number).unwrap_or_default(),
         block_ts: meta.map(|m| m.block_timestamp).unwrap_or_default(),
@@ -108,7 +108,7 @@ fn convert(swap: &Swap) -> Result<StockSwap, Skip> {
         sender: swap.sender.clone(),
         origin: meta.map(|m| m.origin.clone()).unwrap_or_default(),
         fee: swap.fee,
-        hook_address: swap.hook.as_ref().map(|h| h.address.clone()).unwrap_or_default(),
+        hook_address: swap.hook.address.clone(),
         ..Default::default()
     };
     row.usable = quality::usable(&row);

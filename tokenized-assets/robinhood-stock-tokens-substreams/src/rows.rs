@@ -3,7 +3,7 @@
 //! value a ClickHouse Decimal128(18) column accepts: the sink rejects empty
 //! strings and values past 38 digits outright instead of nulling them.
 
-use prost_types::Timestamp;
+use buffa_types::google::protobuf::Timestamp;
 
 use crate::pb::hood::basis::v1::{BasisTicks, ChainlinkAnswers, Rows, StockSwaps};
 use crate::price;
@@ -13,7 +13,7 @@ pub fn build(swaps: StockSwaps, answers: ChainlinkAnswers, ticks: BasisTicks) ->
 
     for mut s in swaps.swaps {
         s.id = row_id(&s.tx_hash, s.log_index);
-        s.block_time = Some(block_time(s.block_ts));
+        s.block_time = block_time(s.block_ts).into();
         for v in [
             &mut s.shares_ui,
             &mut s.shares_raw_adjusted,
@@ -28,14 +28,14 @@ pub fn build(swaps: StockSwaps, answers: ChainlinkAnswers, ticks: BasisTicks) ->
 
     for mut a in answers.answers {
         a.id = row_id(&a.tx_hash, a.log_index);
-        a.block_time = Some(block_time(a.block_ts));
+        a.block_time = block_time(a.block_ts).into();
         a.answer_usd = price::decimal128(&a.answer_usd);
         out.chainlink_answers.push(a);
     }
 
     for mut t in ticks.ticks {
         t.id = row_id(&t.tx_hash, t.log_index);
-        t.block_time = Some(block_time(t.block_ts));
+        t.block_time = block_time(t.block_ts).into();
         for v in [&mut t.implied_usd, &mut t.ref_usd, &mut t.amount_usd] {
             *v = price::decimal128(v);
         }
@@ -53,6 +53,7 @@ fn block_time(block_ts: u64) -> Timestamp {
     Timestamp {
         seconds: block_ts as i64,
         nanos: 0,
+        ..Default::default()
     }
 }
 
@@ -94,10 +95,12 @@ mod tests {
         assert_eq!(s.id, "0xa-2");
         assert_eq!(
             s.block_time,
-            Some(Timestamp {
+            Timestamp {
                 seconds: 1_781_706_600,
-                nanos: 0
-            })
+                nanos: 0,
+                ..Default::default()
+            }
+            .into()
         );
         let a = &rows.chainlink_answers[0];
         assert_eq!(a.id, "0xb-3");

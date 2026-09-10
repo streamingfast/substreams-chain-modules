@@ -1,4 +1,6 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
@@ -8,25 +10,17 @@ use substreams_database_change::tables::Tables;
 use substreams_ethereum::pb::eth::v2::Block;
 use substreams_ethereum::Event;
 
-use crate::pb::chainlink_staking::types::v1::{
-    Events, RewardUpdate, RewardVaultSet, StakeEvent, StakeEventV1,
-};
+use crate::pb::chainlink_staking::types::v1::{Events, RewardUpdate, RewardVaultSet, StakeEvent, StakeEventV1};
 
 // CommunityStakingPool on Ethereum mainnet — deployed block 18572190
-const COMMUNITY_STAKING_POOL: [u8; 20] =
-    hex_literal::hex!("bc10f2e862ed4502144c7d632a3459f49dfcdb5e");
+const COMMUNITY_STAKING_POOL: [u8; 20] = hex_literal::hex!("bc10f2e862ed4502144c7d632a3459f49dfcdb5e");
 // OperatorStakingPool on Ethereum mainnet — deployed block 18572190
-const OPERATOR_STAKING_POOL: [u8; 20] =
-    hex_literal::hex!("a1d76a7ca72128541e9fcacafbda3a92ef94fdc5");
+const OPERATOR_STAKING_POOL: [u8; 20] = hex_literal::hex!("a1d76a7ca72128541e9fcacafbda3a92ef94fdc5");
 // Legacy Staking V1 — deployed block 16083969
 const STAKING_V1: [u8; 20] = hex_literal::hex!("3feb1e09b4bb0e7f0387cee092a52e85797ab889");
 
 fn block_timestamp(block: &Block) -> u64 {
-    block
-        .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+    block.header.timestamp.seconds as u64
 }
 
 fn pool_name(addr: &[u8; 20]) -> &'static str {
@@ -171,9 +165,7 @@ pub fn map_reward_vault_events(block: Block, store: StoreGetString) -> Result<Ev
 
             let pool_type = store.get_last(&vault_addr).unwrap_or_default();
 
-            if let Some(ev) =
-                abi::reward_vault::events::CommunityPoolRewardUpdated::match_and_decode(log)
-            {
+            if let Some(ev) = abi::reward_vault::events::CommunityPoolRewardUpdated::match_and_decode(log) {
                 let id = format!("{}-{}", tx_hash, log.index);
                 events.reward_updates.push(RewardUpdate {
                     id,
@@ -188,9 +180,7 @@ pub fn map_reward_vault_events(block: Block, store: StoreGetString) -> Result<Ev
                 continue;
             }
 
-            if let Some(ev) =
-                abi::reward_vault::events::OperatorPoolRewardUpdated::match_and_decode(log)
-            {
+            if let Some(ev) = abi::reward_vault::events::OperatorPoolRewardUpdated::match_and_decode(log) {
                 let id = format!("{}-{}", tx_hash, log.index);
                 events.reward_updates.push(RewardUpdate {
                     id,
@@ -256,7 +246,11 @@ pub fn db_out(events: Events, vault_events: Events) -> Result<DatabaseChanges, E
             .set("timestamp", ev.timestamp as i64);
     }
 
-    for ev in events.reward_vault_sets.iter().chain(vault_events.reward_vault_sets.iter()) {
+    for ev in events
+        .reward_vault_sets
+        .iter()
+        .chain(vault_events.reward_vault_sets.iter())
+    {
         tables
             .create_row("reward_vault_sets", &ev.id)
             .set("pool", &ev.pool)
