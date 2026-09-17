@@ -15,11 +15,7 @@ buffa.workspace = true
 buffa-types.workspace = true
 hex = { workspace = true }
 hex-literal = { workspace = true }
-ethabi = { workspace = true }
 num-bigint = { workspace = true }
-
-[target.wasm32-unknown-unknown.dependencies]
-getrandom = { version = "0.2", features = ["custom"] }
 
 [build-dependencies]
 anyhow = { workspace = true }

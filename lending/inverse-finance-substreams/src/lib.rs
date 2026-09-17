@@ -39,7 +39,7 @@ fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
 #[substreams::handlers::store]
 pub fn store_pools(block: &BlockLazyView<'_>, store: StoreSetString) {
     for trx in block.transactions() {
-        let Ok(Some(receipt)) = trx.receipt() else {
+        let Some(receipt) = trx.receipt() else {
             continue;
         };
         for log in receipt.logs.iter() {
@@ -61,7 +61,7 @@ pub fn map_events(block: &BlockLazyView<'_>, store: StoreGetString) -> Result<Ev
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        let Some(receipt) = trx.receipt()? else {
+        let Some(receipt) = trx.receipt() else {
             continue;
         };
         for log in receipt.logs.iter() {

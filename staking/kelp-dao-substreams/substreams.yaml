@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: kelp-dao-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Kelp DAO on Ethereum mainnet. Tracks asset and ETH deposits into the LRT deposit pool and withdrawal events from the withdrawal manager for rsETH liquid restaking.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/kelp-dao-substreams
 

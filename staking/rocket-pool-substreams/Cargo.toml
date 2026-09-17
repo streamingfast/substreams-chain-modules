@@ -11,7 +11,6 @@ crate-type = ["cdylib"]
 name = "rocket_pool_substreams"
 
 [dependencies]
-ethabi.workspace = true
 hex.workspace = true
 hex-literal.workspace = true
 buffa.workspace = true

@@ -82,7 +82,7 @@ pub fn decode_block(config: &Config, blk: &eth::BlockLazyView<'_>) -> v4::Events
     };
 
     for trx in blk.transactions() {
-        let Ok(Some(receipt)) = trx.receipt() else {
+        let Some(receipt) = trx.receipt() else {
             continue;
         };
         let tx_hash = Hex(&trx.hash).to_string();

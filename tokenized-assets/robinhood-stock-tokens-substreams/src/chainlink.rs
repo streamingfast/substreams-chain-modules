@@ -55,7 +55,7 @@ pub fn build(block: &BlockLazyView<'_>) -> ChainlinkAnswers {
     let mut out = ChainlinkAnswers::default();
 
     for trx in block.transactions() {
-        let Ok(Some(receipt)) = trx.receipt() else {
+        let Some(receipt) = trx.receipt() else {
             continue;
         };
         for log in receipt.logs.iter() {

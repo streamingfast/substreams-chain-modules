@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: hord-fi-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Hord hETH staking on Ethereum mainnet. Tracks hETH token transfers and staking stats updates.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/hord-fi-substreams
 

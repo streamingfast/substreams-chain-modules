@@ -16,7 +16,5 @@ buffa = { workspace = true }
 hex = { workspace = true }
 hex-literal = { workspace = true }
 num-bigint = { workspace = true }
-ethabi = { workspace = true }
-
 [build-dependencies]
 substreams-ethereum = { workspace = true }

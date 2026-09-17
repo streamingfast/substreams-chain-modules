@@ -46,7 +46,7 @@ pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for lc in trx.logs_with_calls()? {
+        for lc in trx.logs_with_calls() {
             let log = &lc.log;
             let id = format!("{}-{}", tx_hash, log.index);
 

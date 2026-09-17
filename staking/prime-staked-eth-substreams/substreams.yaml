@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: prime-staked-eth-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Prime Staked ETH (primeETH) liquid restaking on Ethereum mainnet. Tracks supported-asset additions, asset deposits, asset swaps, and withdrawal claims.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/prime-staked-eth-substreams
 

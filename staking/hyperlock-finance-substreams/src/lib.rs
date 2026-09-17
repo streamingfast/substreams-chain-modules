@@ -40,7 +40,7 @@ pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        let Some(receipt) = trx.receipt()? else {
+        let Some(receipt) = trx.receipt() else {
             continue;
         };
         for log in receipt.logs.iter() {

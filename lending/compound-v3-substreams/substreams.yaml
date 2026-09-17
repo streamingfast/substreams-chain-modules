@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: compound-v3-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Compound V3 (Comet) markets on Ethereum mainnet. Covers Supply, Withdraw, Transfer, AbsorbCollateral, AbsorbDebt, BuyCollateral, and PauseAction events across all Comet deployments. Outputs DatabaseChanges for SQL sink consumption.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/lending/compound-v3-substreams
 

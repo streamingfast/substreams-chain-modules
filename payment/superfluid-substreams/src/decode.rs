@@ -61,7 +61,7 @@ pub fn decode_block(
     local_gov.insert(KNOWN_GOV.to_string());
 
     for trx in blk.transactions() {
-        let Ok(Some(receipt)) = trx.receipt() else {
+        let Some(receipt) = trx.receipt() else {
             continue;
         };
         for log in receipt.logs.iter() {
@@ -89,7 +89,7 @@ pub fn decode_block(
     }
 
     for trx in blk.transactions() {
-        let Ok(Some(receipt)) = trx.receipt() else {
+        let Some(receipt) = trx.receipt() else {
             continue;
         };
         let tx_hash = Hex(&trx.hash).to_string();

@@ -8,8 +8,6 @@ use substreams_ethereum::pb::eth::v2 as eth;
 
 use crate::pb::uniswap::v4;
 
-substreams_ethereum::init!();
-
 /// Decode Uniswap v4 PoolManager + PositionManager logs. Contract addresses come
 /// from `params` (`pool_manager=0x...&position_manager=0x...`), set per network in
 /// the manifest.

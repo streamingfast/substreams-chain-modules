@@ -15,7 +15,5 @@ substreams-database-change = { workspace = true }
 buffa = { workspace = true }
 hex = { workspace = true }
 hex-literal = { workspace = true }
-ethabi = { workspace = true }
-
 [build-dependencies]
 substreams-ethereum = { workspace = true }

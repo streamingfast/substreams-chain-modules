@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: stader-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Stader Labs liquid staking (ETHx) on Ethereum mainnet. Tracks deposits into the staking pool manager, ETHx exchange-rate updates from the Stader oracle, and protocol/user/operator reward transfers from the socializing pools.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/stader-substreams
 

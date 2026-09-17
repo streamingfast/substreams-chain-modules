@@ -32,7 +32,7 @@ pub fn map_factory_events(block: &BlockLazyView<'_>) -> Result<Pools, Error> {
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
-        for lc in trx.logs_with_calls()? {
+        for lc in trx.logs_with_calls() {
             let log = &lc.log;
             if log.address != POOL_FACTORY {
                 continue;
@@ -68,7 +68,7 @@ pub fn map_pool_events(block: &BlockLazyView<'_>, store: StoreGetString) -> Resu
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
-        for lc in trx.logs_with_calls()? {
+        for lc in trx.logs_with_calls() {
             let log = &lc.log;
             let pool_addr = format!("0x{}", hex::encode(&log.address));
 

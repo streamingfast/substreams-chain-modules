@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: swell-liquid-staking-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Swell liquid staking (swETH) on Ethereum mainnet. Tracks ETH deposits, withdrawal requests/claims, and reprice/reward-rate updates.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/swell-liquid-staking-substreams
 

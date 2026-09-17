@@ -12,7 +12,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 anyhow.workspace = true
-ethabi.workspace = true
 hex.workspace = true
 hex-literal.workspace = true
 num-bigint.workspace = true

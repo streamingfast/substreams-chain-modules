@@ -13,8 +13,6 @@ use substreams_ethereum::Event;
 
 use crate::pb::superfluid::v1 as sf;
 
-substreams_ethereum::init!();
-
 /// Superfluid Base mainnet fixed contracts (not data seeds).
 const GOV: [u8; 20] = hex!("55f7758dd99d5e185f4cc08d4ad95b71f598264d");
 const HOST: [u8; 20] = hex!("4c073b3bab6d8826b8c5b229f3cfdc1ec6e47e74");
@@ -42,7 +40,7 @@ fn store_dynamic_addresses(blk: &eth::BlockLazyView<'_>, store: StoreSetIfNotExi
     store.set_if_not_exists(0, format!("gov:{}", addr_key(&GOV)), &1);
 
     for trx in blk.transactions() {
-        let Ok(Some(receipt)) = trx.receipt() else {
+        let Some(receipt) = trx.receipt() else {
             continue;
         };
         for log in receipt.logs.iter() {

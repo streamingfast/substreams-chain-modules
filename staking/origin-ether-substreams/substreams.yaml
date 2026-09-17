@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: origin-ether-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Origin Ether (OETH) vault on Ethereum mainnet. Tracks asset allocation, redemptions, withdrawal requests/claims, and yield distribution.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/origin-ether-substreams
 
