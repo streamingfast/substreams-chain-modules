@@ -11,11 +11,10 @@ crate-type = ["cdylib"]
 name = "creth2_substreams"
 
 [dependencies]
-ethabi.workspace = true
 hex.workspace = true
 hex-literal.workspace = true
 num-bigint.workspace = true
-prost.workspace = true
+buffa.workspace = true
 substreams.workspace = true
 substreams-database-change.workspace = true
 substreams-ethereum.workspace = true

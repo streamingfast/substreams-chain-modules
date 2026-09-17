@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: suzaku-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Suzaku restaking on Avalanche. Tracks collateral entities created by the CollateralFactory and deposits/withdrawals on each dynamically-created Collateral contract.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/suzaku-substreams
 

@@ -1,11 +1,8 @@
 version: v1
 plugins:
-- plugin: prost
+- plugin: buf.build/anthropics/buffa:v0.9.2
   out: src/pb
   opt:
-    - file_descriptor_set=false
-
-- plugin: prost-crate
-  out: src/pb
-  opt:
-    - no_features
+    - lazy_views=true
+    - unknown_fields=false
+    - idiomatic_field_names=true

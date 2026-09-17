@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: coinbase-wrapped-staked-eth-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Coinbase Wrapped Staked ETH (cbETH) on Ethereum mainnet. Tracks mints, burns, and exchange rate updates for Coinbase's liquid staking token.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/coinbase-wrapped-staked-eth-substreams
 

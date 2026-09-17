@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: chainlink-staking-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Chainlink LINK staking events across CommunityStakingPool, OperatorStakingPool, and legacy Staking V1 on Ethereum mainnet. Outputs DatabaseChanges for SQL sink consumption.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/chainlink-staking-substreams
 
