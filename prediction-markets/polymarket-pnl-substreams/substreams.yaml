@@ -1,0 +1,186 @@
+specVersion: v0.1.0
+package:
+  name: polymarket-pnl-substreams
+  version: v0.1.0
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/prediction-markets/polymarket-pnl-substreams
+  description: >
+    Per-address Polymarket positions, mark-to-market PnL, volume and whale
+    detection on Polygon, derived from order fills (streamingfast/
+    polymarket-fills, unified v1+v2), CTF position splits and merges
+    (colindickson/polymarket-ctf, token IDs derived via Polymarket's own
+    go-ctf-utils position-ID algorithm), and payout redemptions. Ships a
+    PostgreSQL db_out sink for the trades, whale_alerts, user_positions,
+    user_pnl and markets tables.
+
+network: polygon
+
+imports:
+  pmfills: ../polymarket-fills-substreams/polymarket-fills-substreams-v0.1.0.spkg
+  pmctf: https://spkg.io/colindickson/polymarket-ctf-v0.13.0.spkg
+  database: https://github.com/streamingfast/substreams-sink-database-changes/releases/download/v4.0.0/substreams-sink-database-changes-v4.0.0.spkg
+
+protobuf:
+  files:
+    - polymarket/pnl/v1/pnl.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/polymarket_pnl_substreams.wasm
+
+modules:
+  - name: map_trade_legs
+    kind: map
+    initialBlock: 33605403
+    doc: >
+      Per-OrderFilled-leg position and cash-flow deltas (maker + taker),
+      volume, price and whale-alert extraction. No store inputs — every
+      downstream store is a plain commutative "add" (or "set" for latest
+      price), so nothing here needs to read prior state and the module
+      graph stays acyclic. See pnl.proto for the mark-to-market PnL model
+      this enables.
+    inputs:
+      - map: pmfills:map_fills
+    output:
+      type: proto:polymarket.pnl.v1.TradeLegs
+
+  - name: map_markets
+    kind: map
+    initialBlock: 4023686
+    doc: Market registry rows from CTF ConditionPreparation (creates) and ConditionResolution (resolves). Metadata only — see pnl.proto scope note.
+    inputs:
+      - map: pmctf:map_ctf_events
+    output:
+      type: proto:polymarket.pnl.v1.MarketDeltas
+
+  - name: map_ctf_legs
+    kind: map
+    initialBlock: 33605403
+    doc: >
+      Position/cash-flow legs from CTF PositionSplit (mint) and
+      PositionsMerge (burn). token_id is derived per partition entry via
+      Polymarket's own go-ctf-utils position-ID algorithm (keccak +
+      quadratic-residue walk, no elliptic-curve step — verified against
+      that repo's real test vectors). Scoped to parent_collection_id == 0
+      (see pnl.proto). PayoutRedemption is handled separately by
+      map_redemption_legs to avoid a store self-reference.
+    inputs:
+      - map: pmctf:map_ctf_events
+    output:
+      type: proto:polymarket.pnl.v1.TradeLegs
+
+  - name: store_user_positions
+    kind: store
+    initialBlock: 33605403
+    updatePolicy: add
+    valueType: bigint
+    doc: >
+      "<user>:<token_id>" -> net open position, raw token units (signed),
+      from fills and CTF splits/merges only (NOT redemptions — see
+      store_user_redemption_adj and map_redemption_legs).
+    inputs:
+      - map: map_trade_legs
+      - map: map_ctf_legs
+
+  - name: map_redemption_legs
+    kind: map
+    initialBlock: 33605403
+    doc: >
+      Position/cash-flow legs from CTF PayoutRedemption. The event has no
+      per-token amount (Gnosis redeemPositions() burns the caller's entire
+      balance), so the amount closed is read from store_user_positions —
+      the module that store_user_positions cannot also depend on this one
+      for, hence the separate store_user_redemption_adj below.
+    inputs:
+      - map: pmctf:map_ctf_events
+      - store: store_user_positions
+        mode: get
+    output:
+      type: proto:polymarket.pnl.v1.TradeLegs
+
+  - name: store_user_redemption_adj
+    kind: store
+    initialBlock: 33605403
+    updatePolicy: add
+    valueType: bigint
+    doc: "<user>:<token_id> -> redemption-closing adjustment; db_out sums this with store_user_positions for the displayed token_amount."
+    inputs:
+      - map: map_redemption_legs
+
+  - name: store_user_cash_flow
+    kind: store
+    initialBlock: 33605403
+    updatePolicy: add
+    valueType: bigint
+    doc: >
+      "<user>:<token_id>" -> cumulative signed cash flow (negative = paid,
+      positive = received), raw USDC atomic units. "<user>:ALL" -> the same,
+      summed across every token for that user. Fed by fills, CTF splits/
+      merges and redemptions.
+    inputs:
+      - map: map_trade_legs
+      - map: map_ctf_legs
+      - map: map_redemption_legs
+
+  - name: store_user_volume
+    kind: store
+    initialBlock: 33605403
+    updatePolicy: add
+    valueType: bigint
+    doc: "<user> -> lifetime notional traded, raw USDC atomic units."
+    inputs:
+      - map: map_trade_legs
+
+  - name: store_market_volume
+    kind: store
+    initialBlock: 33605403
+    updatePolicy: add
+    valueType: bigint
+    doc: "<token_id> -> lifetime notional traded against this outcome token, raw USDC atomic units."
+    inputs:
+      - map: map_trade_legs
+
+  - name: store_latest_prices
+    kind: store
+    initialBlock: 33605403
+    updatePolicy: set
+    valueType: proto:polymarket.pnl.v1.LatestPrice
+    doc: "<token_id> -> most recent trade price."
+    inputs:
+      - map: map_trade_legs
+
+  - name: db_out
+    kind: map
+    initialBlock: 33605403
+    doc: PostgreSQL Database Changes for trades, whale_alerts, user_positions, user_pnl and markets (schema.sql).
+    inputs:
+      - map: map_trade_legs
+      - map: map_ctf_legs
+      - map: map_redemption_legs
+      - map: map_markets
+      - store: store_user_positions
+        mode: get
+      - store: store_user_redemption_adj
+        mode: get
+      - store: store_user_cash_flow
+        mode: get
+      - store: store_user_volume
+        mode: get
+      - store: store_market_volume
+        mode: get
+      - store: store_latest_prices
+        mode: get
+    output:
+      type: proto:sf.substreams.sink.database.v1.DatabaseChanges
+
+sink:
+  module: db_out
+  type: sf.substreams.sink.sql.service.v1.Service
+  config:
+    schema: ./schema.sql
+    engine: postgres

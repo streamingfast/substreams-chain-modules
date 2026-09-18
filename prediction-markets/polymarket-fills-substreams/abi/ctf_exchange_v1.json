@@ -1,0 +1,110 @@
+[
+  {
+    "type": "event",
+    "name": "OrderFilled",
+    "anonymous": false,
+    "inputs": [
+      { "name": "orderHash", "type": "bytes32", "indexed": true },
+      { "name": "maker", "type": "address", "indexed": true },
+      { "name": "taker", "type": "address", "indexed": true },
+      { "name": "makerAssetId", "type": "uint256", "indexed": false },
+      { "name": "takerAssetId", "type": "uint256", "indexed": false },
+      { "name": "makerAmountFilled", "type": "uint256", "indexed": false },
+      { "name": "takerAmountFilled", "type": "uint256", "indexed": false },
+      { "name": "fee", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "OrdersMatched",
+    "anonymous": false,
+    "inputs": [
+      { "name": "takerOrderHash", "type": "bytes32", "indexed": true },
+      { "name": "takerOrderMaker", "type": "address", "indexed": true },
+      { "name": "makerAssetId", "type": "uint256", "indexed": false },
+      { "name": "takerAssetId", "type": "uint256", "indexed": false },
+      { "name": "makerAmountFilled", "type": "uint256", "indexed": false },
+      { "name": "takerAmountFilled", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "OrderCancelled",
+    "anonymous": false,
+    "inputs": [
+      { "name": "orderHash", "type": "bytes32", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "FeeCharged",
+    "anonymous": false,
+    "inputs": [
+      { "name": "receiver", "type": "address", "indexed": true },
+      { "name": "tokenId", "type": "uint256", "indexed": false },
+      { "name": "amount", "type": "uint256", "indexed": false }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "NewAdmin",
+    "anonymous": false,
+    "inputs": [
+      { "name": "newAdminAddress", "type": "address", "indexed": true },
+      { "name": "admin", "type": "address", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "NewOperator",
+    "anonymous": false,
+    "inputs": [
+      { "name": "newOperatorAddress", "type": "address", "indexed": true },
+      { "name": "admin", "type": "address", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "RemovedAdmin",
+    "anonymous": false,
+    "inputs": [
+      { "name": "removedAdmin", "type": "address", "indexed": true },
+      { "name": "admin", "type": "address", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "RemovedOperator",
+    "anonymous": false,
+    "inputs": [
+      { "name": "removedOperator", "type": "address", "indexed": true },
+      { "name": "admin", "type": "address", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "TradingPaused",
+    "anonymous": false,
+    "inputs": [
+      { "name": "pauser", "type": "address", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "TradingUnpaused",
+    "anonymous": false,
+    "inputs": [
+      { "name": "pauser", "type": "address", "indexed": true }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "TokenRegistered",
+    "anonymous": false,
+    "inputs": [
+      { "name": "token0", "type": "uint256", "indexed": true },
+      { "name": "token1", "type": "uint256", "indexed": true },
+      { "name": "conditionId", "type": "bytes32", "indexed": true }
+    ]
+  }
+]
