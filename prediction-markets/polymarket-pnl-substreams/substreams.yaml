@@ -6,9 +6,11 @@ package:
   description: >
     Per-address Polymarket positions, mark-to-market PnL, volume and whale
     detection on Polygon, derived from order fills (streamingfast/
-    polymarket-fills, unified v1+v2) plus a market registry from CTF
-    (colindickson/polymarket-ctf). Ships a PostgreSQL db_out sink for the
-    trades, whale_alerts, user_positions, user_pnl and markets tables.
+    polymarket-fills, unified v1+v2), CTF position splits and merges
+    (colindickson/polymarket-ctf, token IDs derived via Polymarket's own
+    go-ctf-utils position-ID algorithm), and payout redemptions. Ships a
+    PostgreSQL db_out sink for the trades, whale_alerts, user_positions,
+    user_pnl and markets tables.
 
 network: polygon
 
@@ -56,14 +58,59 @@ modules:
     output:
       type: proto:polymarket.pnl.v1.MarketDeltas
 
+  - name: map_ctf_legs
+    kind: map
+    initialBlock: 33605403
+    doc: >
+      Position/cash-flow legs from CTF PositionSplit (mint) and
+      PositionsMerge (burn). token_id is derived per partition entry via
+      Polymarket's own go-ctf-utils position-ID algorithm (keccak +
+      quadratic-residue walk, no elliptic-curve step — verified against
+      that repo's real test vectors). Scoped to parent_collection_id == 0
+      (see pnl.proto). PayoutRedemption is handled separately by
+      map_redemption_legs to avoid a store self-reference.
+    inputs:
+      - map: pmctf:map_ctf_events
+    output:
+      type: proto:polymarket.pnl.v1.TradeLegs
+
   - name: store_user_positions
     kind: store
     initialBlock: 33605403
     updatePolicy: add
     valueType: bigint
-    doc: "<user>:<token_id> -> net open position, raw token units (signed)."
+    doc: >
+      "<user>:<token_id>" -> net open position, raw token units (signed),
+      from fills and CTF splits/merges only (NOT redemptions — see
+      store_user_redemption_adj and map_redemption_legs).
     inputs:
       - map: map_trade_legs
+      - map: map_ctf_legs
+
+  - name: map_redemption_legs
+    kind: map
+    initialBlock: 33605403
+    doc: >
+      Position/cash-flow legs from CTF PayoutRedemption. The event has no
+      per-token amount (Gnosis redeemPositions() burns the caller's entire
+      balance), so the amount closed is read from store_user_positions —
+      the module that store_user_positions cannot also depend on this one
+      for, hence the separate store_user_redemption_adj below.
+    inputs:
+      - map: pmctf:map_ctf_events
+      - store: store_user_positions
+        mode: get
+    output:
+      type: proto:polymarket.pnl.v1.TradeLegs
+
+  - name: store_user_redemption_adj
+    kind: store
+    initialBlock: 33605403
+    updatePolicy: add
+    valueType: bigint
+    doc: "<user>:<token_id> -> redemption-closing adjustment; db_out sums this with store_user_positions for the displayed token_amount."
+    inputs:
+      - map: map_redemption_legs
 
   - name: store_user_cash_flow
     kind: store
@@ -73,9 +120,12 @@ modules:
     doc: >
       "<user>:<token_id>" -> cumulative signed cash flow (negative = paid,
       positive = received), raw USDC atomic units. "<user>:ALL" -> the same,
-      summed across every token for that user.
+      summed across every token for that user. Fed by fills, CTF splits/
+      merges and redemptions.
     inputs:
       - map: map_trade_legs
+      - map: map_ctf_legs
+      - map: map_redemption_legs
 
   - name: store_user_volume
     kind: store
@@ -110,8 +160,12 @@ modules:
     doc: PostgreSQL Database Changes for trades, whale_alerts, user_positions, user_pnl and markets (schema.sql).
     inputs:
       - map: map_trade_legs
+      - map: map_ctf_legs
+      - map: map_redemption_legs
       - map: map_markets
       - store: store_user_positions
+        mode: get
+      - store: store_user_redemption_adj
         mode: get
       - store: store_user_cash_flow
         mode: get

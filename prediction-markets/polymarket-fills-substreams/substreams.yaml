@@ -5,12 +5,12 @@ package:
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/prediction-markets/polymarket-fills-substreams
   description: >
     Unified Polymarket order-fill history on Polygon: CLOB v1 (CTF Exchange,
-    Neg Risk CTF Exchange, from their real deployment blocks) merged with
-    CLOB v2 (streamingfast/polymarket-exchange) into one ordinal-sorted
-    OrderFilled/OrdersMatched stream with an exchange_version column, so a
-    single query spans both eras. Every fill-extraction module is index-
-    filtered on the exchange contract addresses, so quiet blocks are never
-    billed.
+    Neg Risk CTF Exchange) and both CLOB v2 exchanges (CTF Exchange V2 via
+    colindickson/polymarket-exchange, and Neg Risk CTF Exchange V2, read
+    natively here) merged into one ordinal-sorted OrderFilled/OrdersMatched
+    stream with an exchange_version column, so a single query spans every
+    era. Every fill-extraction module is index-filtered on the exchange
+    contract addresses, so quiet blocks are never billed.
 
 network: polygon
 
@@ -53,34 +53,74 @@ modules:
     output:
       type: proto:polymarket.fills.v1.V1Events
 
+  - name: map_v2b_fills
+    kind: map
+    initialBlock: 85058176
+    doc: >
+      Native decode of Neg Risk CTF Exchange V2
+      (0xe2222d279d744050d28e00520010520000310f59, deployed block 85058176 —
+      verified via eth_getCode binary search). OrderFilled/OrdersMatched
+      only; ABI shape (topic0, indexed-param count, non-indexed data width)
+      empirically confirmed against real eth_getLogs output from this
+      address, matching CTF Exchange V2 exactly. This contract is named in
+      the substreams-dev landing-page FAQ draft but was not read by any
+      published package before this module.
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    blockFilter:
+      module: eth_common:index_events
+      query:
+        string: "evt_addr:0xe2222d279d744050d28e00520010520000310f59"
+    output:
+      type: proto:polymarket.fills.v1.UnifiedFills
+
   - name: map_fills
     kind: map
     initialBlock: 33605403
     doc: >
-      Unified OrderFilled/OrdersMatched/OrderCancelled across CLOB v1 and v2.
-      V2's side+token_id encoding is normalized into maker_asset_id/
-      taker_asset_id so v1 and v2 rows union without a schema mismatch.
+      Unified OrderFilled/OrdersMatched/OrderCancelled across CLOB v1 and
+      both v2 exchanges. V2's side+token_id encoding is normalized into
+      maker_asset_id/taker_asset_id so v1 and v2 rows union without a schema
+      mismatch.
     inputs:
       - map: map_v1_events
       - map: pmx_v2:map_exchange_events
+      - map: map_v2b_fills
     blockFilter:
       module: eth_common:index_events
       query:
-        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a || evt_addr:0xe111180000d2663c0091e4f400237545b87b996b"
+        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a || evt_addr:0xe111180000d2663c0091e4f400237545b87b996b || evt_addr:0xe2222d279d744050d28e00520010520000310f59"
     output:
       type: proto:polymarket.fills.v1.UnifiedFills
+
+  - name: map_v2b_fee_events
+    kind: map
+    initialBlock: 85058176
+    doc: >
+      Native decode of Neg Risk CTF Exchange V2's FeeCharged only.
+      Empirically confirmed (2 topics, 32 bytes non-indexed data) against
+      real logs from this address.
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    blockFilter:
+      module: eth_common:index_events
+      query:
+        string: "evt_addr:0xe2222d279d744050d28e00520010520000310f59"
+    output:
+      type: proto:polymarket.fills.v1.UnifiedFeeEvents
 
   - name: map_fee_events
     kind: map
     initialBlock: 33605403
-    doc: Unified fee events across v1 (FeeCharged only) and v2 (FeeCharged, FeeReceiverUpdated, MaxFeeRateUpdated).
+    doc: Unified fee events across v1 (FeeCharged only) and both v2 exchanges (FeeCharged always; FeeReceiverUpdated/MaxFeeRateUpdated from CTF Exchange V2 only, see map_v2b_fee_events doc).
     inputs:
       - map: map_v1_events
       - map: pmx_v2:map_fee_events
+      - map: map_v2b_fee_events
     blockFilter:
       module: eth_common:index_events
       query:
-        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a || evt_addr:0xe111180000d2663c0091e4f400237545b87b996b"
+        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a || evt_addr:0xe111180000d2663c0091e4f400237545b87b996b || evt_addr:0xe2222d279d744050d28e00520010520000310f59"
     output:
       type: proto:polymarket.fills.v1.UnifiedFeeEvents
 

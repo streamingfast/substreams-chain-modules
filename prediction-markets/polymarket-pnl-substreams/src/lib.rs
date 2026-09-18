@@ -1,3 +1,4 @@
+mod ctf_position;
 mod pb;
 
 use std::str::FromStr;
@@ -212,16 +213,38 @@ fn map_trade_legs(fills: UnifiedFills) -> Result<TradeLegs, Error> {
     })
 }
 
+// Fed by fills (map_trade_legs) and CTF splits/merges (map_ctf_legs) only —
+// deliberately NOT by map_redemption_legs, so map_redemption_legs can read
+// this store (see its doc comment) without creating a module-graph cycle.
+// The redemption-closing amount lives in store_user_redemption_adj instead;
+// db_out sums both for the displayed position.
 #[substreams::handlers::store]
-fn store_user_positions(legs: TradeLegs, store: StoreAddBigInt) {
-    for leg in legs.legs {
+fn store_user_positions(trade_legs: TradeLegs, ctf_legs: TradeLegs, store: StoreAddBigInt) {
+    for leg in trade_legs.legs.into_iter().chain(ctf_legs.legs) {
         store.add(0, &leg.key, bi(&leg.qty_delta));
     }
 }
 
 #[substreams::handlers::store]
-fn store_user_cash_flow(legs: TradeLegs, store: StoreAddBigInt) {
-    for d in legs.cash_flow_deltas {
+fn store_user_redemption_adj(redemption_legs: TradeLegs, store: StoreAddBigInt) {
+    for leg in redemption_legs.legs {
+        store.add(0, &leg.key, bi(&leg.qty_delta));
+    }
+}
+
+#[substreams::handlers::store]
+fn store_user_cash_flow(
+    trade_legs: TradeLegs,
+    ctf_legs: TradeLegs,
+    redemption_legs: TradeLegs,
+    store: StoreAddBigInt,
+) {
+    for d in trade_legs
+        .cash_flow_deltas
+        .into_iter()
+        .chain(ctf_legs.cash_flow_deltas)
+        .chain(redemption_legs.cash_flow_deltas)
+    {
         store.add(0, &d.key, bi(&d.delta));
     }
 }
@@ -250,6 +273,291 @@ fn store_latest_prices(legs: TradeLegs, store: StoreSetProto<LatestPrice>) {
 
 fn hex0x_bytes(b: &[u8]) -> String {
     format!("0x{}", substreams::Hex::encode(b))
+}
+
+fn parse_hex_address(s: &str) -> Option<[u8; 20]> {
+    let stripped = s.strip_prefix("0x").unwrap_or(s);
+    let bytes = hex::decode(stripped).ok()?;
+    bytes.try_into().ok()
+}
+
+// Splits `total` into `n` shares as evenly as possible; the first `total %
+// n` shares get one extra unit, so the shares sum to exactly `total` (no
+// remainder lost to integer division).
+fn even_shares(total: &BigInt, n: usize) -> Vec<BigInt> {
+    if n == 0 {
+        return vec![];
+    }
+    let n_big = BigInt::from(n as u64);
+    let base = total.clone() / n_big.clone();
+    let remainder = total.clone() - base.clone() * n_big;
+    let remainder_units: u64 = remainder.clone().try_into().unwrap_or(0);
+    (0..n)
+        .map(|i| {
+            if (i as u64) < remainder_units {
+                base.clone() + BigInt::from(1u32)
+            } else {
+                base.clone()
+            }
+        })
+        .collect()
+}
+
+// Position-affecting CTF events: PositionSplit and PositionsMerge only.
+// Both carry an explicit `amount` — the exact quantity of each partition
+// token minted (split) or burned (merge) — so no store lookup is needed.
+// PayoutRedemption does not carry a per-token amount (see map_redemption_legs)
+// and is handled separately to avoid a self-referential store dependency.
+//
+// Scope: only parent_collection_id == 0 (top-level, non-nested positions) is
+// handled. Sampled 89,328 real PositionSplit/PositionsMerge events (Polygon
+// blocks 93,000,000-93,003,000): 100% had a zero parent_collection_id, and
+// Polymarket's own reference position-id utility (go-ctf-utils) has no
+// support for a non-zero one either, so this is not expected to ever fire
+// in practice — but it is checked and skipped (not guessed) if it ever does.
+#[substreams::handlers::map]
+fn map_ctf_legs(ctf: CtfEvents) -> Result<TradeLegs, Error> {
+    let mut legs = Vec::new();
+    let mut cash_flow: std::collections::HashMap<String, BigInt> = std::collections::HashMap::new();
+    let mut trades = Vec::new();
+    let mut whale_alerts = Vec::new();
+    let zero_parent = [0u8; 32];
+
+    for ev in &ctf.position_split {
+        let tx = match &ev.tx {
+            Some(t) => t,
+            None => continue,
+        };
+        if ev.parent_collection_id.as_slice() != zero_parent.as_slice() {
+            continue;
+        }
+        let condition_id: [u8; 32] = match ev.condition_id.clone().try_into() {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let collateral = match parse_hex_address(&ev.collateral_token) {
+            Some(c) => c,
+            None => continue,
+        };
+        let amount = bi(&ev.amount);
+        let cost_shares = even_shares(&amount, ev.partition.len());
+
+        for (i, index_set_str) in ev.partition.iter().enumerate() {
+            let index_set = bi(index_set_str);
+            let token_id = ctf_position::compute_position_id(&collateral, &condition_id, &index_set);
+            let key = format!("{}:{}", ev.stakeholder, token_id);
+            let cost = cost_shares[i].clone();
+
+            legs.push(PositionLeg {
+                key: key.clone(),
+                qty_delta: amount.to_string(),
+                cash_delta: (-cost.clone()).to_string(),
+            });
+            *cash_flow.entry(key).or_insert_with(|| BigInt::from(0)) -= cost.clone();
+            *cash_flow
+                .entry(format!("{}:ALL", ev.stakeholder))
+                .or_insert_with(|| BigInt::from(0)) -= cost.clone();
+
+            trades.push(TradeRow {
+                id: format!("{}-{}-{}", tx.tx_hash, tx.log_index, i),
+                block_number: tx.block_number,
+                timestamp: tx.timestamp,
+                tx_hash: tx.tx_hash.clone(),
+                user: ev.stakeholder.clone(),
+                counterparty: String::new(),
+                token_id: token_id.clone(),
+                side: "mint".to_string(),
+                token_amount: amount.to_string(),
+                collateral_amount: cost.to_string(),
+                price: String::new(),
+                exchange_version: 0,
+                exchange_address: ev.collateral_token.clone(),
+            });
+            if cost >= whale_threshold() {
+                whale_alerts.push(WhaleAlert {
+                    id: format!("{}-{}-{}", tx.tx_hash, tx.log_index, i),
+                    block_number: tx.block_number,
+                    timestamp: tx.timestamp,
+                    tx_hash: tx.tx_hash.clone(),
+                    user: ev.stakeholder.clone(),
+                    token_id: token_id.clone(),
+                    collateral_amount: cost.to_string(),
+                });
+            }
+        }
+    }
+
+    for ev in &ctf.positions_merge {
+        let tx = match &ev.tx {
+            Some(t) => t,
+            None => continue,
+        };
+        if ev.parent_collection_id.as_slice() != zero_parent.as_slice() {
+            continue;
+        }
+        let condition_id: [u8; 32] = match ev.condition_id.clone().try_into() {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let collateral = match parse_hex_address(&ev.collateral_token) {
+            Some(c) => c,
+            None => continue,
+        };
+        let amount = bi(&ev.amount);
+        let proceeds_shares = even_shares(&amount, ev.partition.len());
+
+        for (i, index_set_str) in ev.partition.iter().enumerate() {
+            let index_set = bi(index_set_str);
+            let token_id = ctf_position::compute_position_id(&collateral, &condition_id, &index_set);
+            let key = format!("{}:{}", ev.stakeholder, token_id);
+            let proceeds = proceeds_shares[i].clone();
+
+            legs.push(PositionLeg {
+                key: key.clone(),
+                qty_delta: (-amount.clone()).to_string(),
+                cash_delta: proceeds.to_string(),
+            });
+            *cash_flow.entry(key).or_insert_with(|| BigInt::from(0)) += proceeds.clone();
+            *cash_flow
+                .entry(format!("{}:ALL", ev.stakeholder))
+                .or_insert_with(|| BigInt::from(0)) += proceeds.clone();
+
+            trades.push(TradeRow {
+                id: format!("{}-{}-{}", tx.tx_hash, tx.log_index, i),
+                block_number: tx.block_number,
+                timestamp: tx.timestamp,
+                tx_hash: tx.tx_hash.clone(),
+                user: ev.stakeholder.clone(),
+                counterparty: String::new(),
+                token_id,
+                side: "burn".to_string(),
+                token_amount: amount.to_string(),
+                collateral_amount: proceeds.to_string(),
+                price: String::new(),
+                exchange_version: 0,
+                exchange_address: ev.collateral_token.clone(),
+            });
+        }
+    }
+
+    Ok(TradeLegs {
+        legs,
+        cash_flow_deltas: cash_flow
+            .into_iter()
+            .map(|(key, delta)| KeyedDelta {
+                key,
+                delta: delta.to_string(),
+            })
+            .collect(),
+        volume_deltas: vec![],
+        market_volume_deltas: vec![],
+        price_updates: vec![],
+        trades,
+        whale_alerts,
+    })
+}
+
+// PayoutRedemption gives an aggregate `payout` but not a per-token amount:
+// Gnosis's redeemPositions() burns the caller's *entire* balance of each
+// index-set token. So the amount to close is read from store_user_positions
+// (the running position fed by map_trade_legs + map_ctf_legs, i.e. NOT fed
+// by this module) — reading a store this module doesn't also feed keeps the
+// module graph acyclic. The closing amount reflects state through the end
+// of the previous block; a redemption in the same block as the position's
+// last contributing fill/split/merge is not expected to occur in practice
+// (redemption requires the market to already be resolved).
+#[substreams::handlers::map]
+fn map_redemption_legs(ctf: CtfEvents, positions: StoreGetBigInt) -> Result<TradeLegs, Error> {
+    let mut legs = Vec::new();
+    let mut cash_flow: std::collections::HashMap<String, BigInt> = std::collections::HashMap::new();
+    let mut trades = Vec::new();
+    let mut whale_alerts = Vec::new();
+    let zero_parent = [0u8; 32];
+
+    for ev in &ctf.payout_redemption {
+        let tx = match &ev.tx {
+            Some(t) => t,
+            None => continue,
+        };
+        if ev.parent_collection_id.as_slice() != zero_parent.as_slice() {
+            continue;
+        }
+        let condition_id: [u8; 32] = match ev.condition_id.clone().try_into() {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let collateral = match parse_hex_address(&ev.collateral_token) {
+            Some(c) => c,
+            None => continue,
+        };
+        let payout = bi(&ev.payout);
+        let proceeds_shares = even_shares(&payout, ev.index_sets.len());
+
+        for (i, index_set_str) in ev.index_sets.iter().enumerate() {
+            let index_set = bi(index_set_str);
+            let token_id = ctf_position::compute_position_id(&collateral, &condition_id, &index_set);
+            let key = format!("{}:{}", ev.redeemer, token_id);
+            let held = positions.get_last(&key).unwrap_or_else(|| BigInt::from(0));
+            let proceeds = proceeds_shares[i].clone();
+
+            if held.is_zero() {
+                continue;
+            }
+
+            legs.push(PositionLeg {
+                key: key.clone(),
+                qty_delta: (-held.clone()).to_string(),
+                cash_delta: proceeds.to_string(),
+            });
+            *cash_flow.entry(key).or_insert_with(|| BigInt::from(0)) += proceeds.clone();
+            *cash_flow
+                .entry(format!("{}:ALL", ev.redeemer))
+                .or_insert_with(|| BigInt::from(0)) += proceeds.clone();
+
+            trades.push(TradeRow {
+                id: format!("{}-{}-{}", tx.tx_hash, tx.log_index, i),
+                block_number: tx.block_number,
+                timestamp: tx.timestamp,
+                tx_hash: tx.tx_hash.clone(),
+                user: ev.redeemer.clone(),
+                counterparty: String::new(),
+                token_id: token_id.clone(),
+                side: "redeem".to_string(),
+                token_amount: held.to_string(),
+                collateral_amount: proceeds.to_string(),
+                price: String::new(),
+                exchange_version: 0,
+                exchange_address: ev.collateral_token.clone(),
+            });
+            if proceeds >= whale_threshold() {
+                whale_alerts.push(WhaleAlert {
+                    id: format!("{}-{}-{}", tx.tx_hash, tx.log_index, i),
+                    block_number: tx.block_number,
+                    timestamp: tx.timestamp,
+                    tx_hash: tx.tx_hash.clone(),
+                    user: ev.redeemer.clone(),
+                    token_id: token_id.clone(),
+                    collateral_amount: proceeds.to_string(),
+                });
+            }
+        }
+    }
+
+    Ok(TradeLegs {
+        legs,
+        cash_flow_deltas: cash_flow
+            .into_iter()
+            .map(|(key, delta)| KeyedDelta {
+                key,
+                delta: delta.to_string(),
+            })
+            .collect(),
+        volume_deltas: vec![],
+        market_volume_deltas: vec![],
+        price_updates: vec![],
+        trades,
+        whale_alerts,
+    })
 }
 
 #[substreams::handlers::map]
@@ -295,9 +603,12 @@ fn map_markets(ctf: CtfEvents) -> Result<MarketDeltas, Error> {
 
 #[substreams::handlers::map]
 fn db_out(
-    legs: TradeLegs,
+    trade_legs: TradeLegs,
+    ctf_legs: TradeLegs,
+    redemption_legs: TradeLegs,
     markets: MarketDeltas,
     positions: StoreGetBigInt,
+    redemption_adj: StoreGetBigInt,
     cash_flow: StoreGetBigInt,
     volume: StoreGetBigInt,
     market_volume: StoreGetBigInt,
@@ -305,7 +616,23 @@ fn db_out(
 ) -> Result<DatabaseChanges, Error> {
     let mut tables = Tables::new();
 
-    for t in &legs.trades {
+    let all_trades = trade_legs
+        .trades
+        .iter()
+        .chain(ctf_legs.trades.iter())
+        .chain(redemption_legs.trades.iter());
+    let all_whale_alerts = trade_legs
+        .whale_alerts
+        .iter()
+        .chain(ctf_legs.whale_alerts.iter())
+        .chain(redemption_legs.whale_alerts.iter());
+    let all_legs = trade_legs
+        .legs
+        .iter()
+        .chain(ctf_legs.legs.iter())
+        .chain(redemption_legs.legs.iter());
+
+    for t in all_trades {
         tables
             .create_row("trades", t.id.as_str())
             .set("block_number", t.block_number)
@@ -322,7 +649,7 @@ fn db_out(
             .set("exchange_address", &t.exchange_address);
     }
 
-    for w in &legs.whale_alerts {
+    for w in all_whale_alerts {
         tables
             .create_row("whale_alerts", w.id.as_str())
             .set("block_number", w.block_number)
@@ -337,7 +664,7 @@ fn db_out(
     let mut touched_position_keys: Vec<(String, String)> = Vec::new();
     let mut touched_users: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     let mut touched_tokens: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-    for leg in &legs.legs {
+    for leg in all_legs {
         if let Some((user, token_id)) = leg.key.split_once(':') {
             touched_position_keys.push((user.to_string(), token_id.to_string()));
             touched_users.insert(user.to_string());
@@ -347,7 +674,8 @@ fn db_out(
 
     for (user, token_id) in touched_position_keys {
         let key = format!("{}:{}", user, token_id);
-        let qty = positions.get_last(&key).unwrap_or_else(|| BigInt::from(0));
+        let qty = positions.get_last(&key).unwrap_or_else(|| BigInt::from(0))
+            + redemption_adj.get_last(&key).unwrap_or_else(|| BigInt::from(0));
         let net_cash_flow = cash_flow.get_last(&key).unwrap_or_else(|| BigInt::from(0));
         let price = latest_prices
             .get_last(&token_id)

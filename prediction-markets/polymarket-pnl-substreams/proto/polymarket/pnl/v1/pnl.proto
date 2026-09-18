@@ -2,10 +2,11 @@ syntax = "proto3";
 
 package polymarket.pnl.v1;
 
-// Scope note: position/PnL/volume below are derived from OrderFilled fills
-// only (streamingfast/polymarket-fills, unified v1+v2). OrdersMatched is a
-// redundant per-tx summary of OrderFilled legs already counted, so it is
-// excluded to avoid double-counting.
+// Scope note: position/PnL/volume are derived from OrderFilled fills
+// (streamingfast/polymarket-fills, unified v1+v2) plus CTF PositionSplit,
+// PositionsMerge and PayoutRedemption (colindickson/polymarket-ctf).
+// OrdersMatched is a redundant per-tx summary of OrderFilled legs already
+// counted, so it is excluded to avoid double-counting.
 //
 // PnL uses a mark-to-market (cash-flow) model, not lot-level average cost:
 // total_pnl(user, token) = cumulative_cash_flow + qty * latest_price. This
@@ -18,15 +19,15 @@ package polymarket.pnl.v1;
 // would need the same self-referential lot tracking. Once qty reaches 0,
 // total_pnl *is* the fully realized PnL, exactly.
 //
-// CTF PositionSplit/PositionsMerge/PayoutRedemption are not folded into
-// this in v0.1.0: deriving their token_id requires Gnosis CTF's
-// getCollectionId, which for Polymarket's real deployment uses an
-// elliptic-curve (BN254) collection-ID scheme, not plain keccak
-// concatenation — exactly the class of "looks plausible, quietly wrong"
-// arithmetic this package's sibling (polymarket-fills-substreams,
-// replacing a broken lowercase/checksum address filter) exists to avoid
-// repeating. CTF is used only for the markets registry (condition
-// metadata + resolution), which needs no such derivation.
+// CTF token IDs are derived (src/ctf_position.rs) via Polymarket's own
+// go-ctf-utils reference algorithm, for the top-level case only
+// (parent_collection_id == 0) — the general (nested/combinatorial) case
+// needs an elliptic-curve (BN254) collection-ID scheme this package does
+// not implement, since it can't be verified without a live reference.
+// Empirically, 0 of 89,328 sampled real split/merge events had a non-zero
+// parent_collection_id, and go-ctf-utils itself has no support for one
+// either, so this is not expected to matter in practice; any event that
+// does have one is skipped, not guessed at.
 message TradeRow {
   string id = 1; // "<tx_hash>-<log_index>-<leg>"
   uint64 block_number = 2;

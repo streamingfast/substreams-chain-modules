@@ -7,6 +7,7 @@ use substreams_ethereum::pb::eth::v2 as eth;
 use substreams_ethereum::Event;
 
 use abi::ctf_exchange_v1::events as v1e;
+use abi::ctf_exchange_v2::events as v2be;
 use pb::polymarket::exchange::v1 as v2pb;
 use pb::polymarket::fills::v1::{
     FeeCharged, NewAdmin, NewOperator, OrderCancelled, OrderFilled, OrdersMatched,
@@ -18,6 +19,16 @@ const CTF_EXCHANGE_V1: [u8; 20] = hex_literal::hex!("4bfb41d5b3570defd03c39a9a4d
 const NEG_RISK_CTF_EXCHANGE_V1: [u8; 20] =
     hex_literal::hex!("c5d563a36ae78145c45a50134d48a1215220f80a");
 const CTF_EXCHANGE_V2: &str = "0xe111180000d2663c0091e4f400237545b87b996b";
+// Neg Risk CTF Exchange (v2). Deployed block 85,058,176 — confirmed via
+// eth_getCode binary search — and confirmed actively emitting live
+// OrderFilled/OrdersMatched (identical topic0 and data width to
+// CTF_EXCHANGE_V2) via raw eth_getLogs, both against Polygon RPC. Named in
+// the substreams-dev landing-page FAQ draft but not read by any package
+// before this change — colindickson/polymarket-exchange only covers
+// CTF_EXCHANGE_V2 above.
+const NEG_RISK_CTF_EXCHANGE_V2: [u8; 20] =
+    hex_literal::hex!("e2222d279d744050d28e00520010520000310f59");
+const NEG_RISK_CTF_EXCHANGE_V2_STR: &str = "0xe2222d279d744050d28e00520010520000310f59";
 
 fn hex0x(b: &[u8]) -> String {
     format!("0x{}", Hex::encode(b))
@@ -207,9 +218,80 @@ fn log_index_of(tx: &Option<TransactionContext>) -> u64 {
     tx.as_ref().map(|t| t.log_index).unwrap_or(0)
 }
 
+// OrderFilled/OrdersMatched only — the same two events already empirically
+// confirmed (topic0, indexed-param count and non-indexed data width) against
+// real logs from this address. FeeCharged/admin/pause coverage was
+// deliberately left out for this second address: this package's fee/admin/
+// pause decode for CTF_EXCHANGE_V2 mirrors colindickson's own
+// polymarket-exchange output, which is empirically validated against real
+// emitted events; NEG_RISK_CTF_EXCHANGE_V2 has no such reference package to
+// cross-check against, and those events are rare enough (admin actions) that
+// none appeared in any sampled block range to verify indexed-ness against.
+// Shipping unverified would repeat exactly the class of mistake this package
+// exists to avoid.
 #[substreams::handlers::map]
-fn map_fills(v1: V1Events, v2: v2pb::ExchangeEvents) -> Result<UnifiedFills, Error> {
+fn map_v2b_fills(block: eth::Block) -> Result<UnifiedFills, Error> {
+    let mut out = UnifiedFills::default();
+
+    for trx in block.transactions() {
+        let tx_hash = trx.hash.clone();
+
+        for (log, _call) in trx.logs_with_calls() {
+            if log.address != NEG_RISK_CTF_EXCHANGE_V2 {
+                continue;
+            }
+            let tx = tx_ctx(&block, log.index as u64, &tx_hash);
+
+            if let Some(ev) = v2be::OrderFilled::match_and_decode(log) {
+                let (maker_asset_id, taker_asset_id) =
+                    v2_asset_ids(Into::<u32>::into(ev.side.clone()), &ev.token_id.to_string());
+                out.order_filled.push(OrderFilled {
+                    order_hash: ev.order_hash.to_vec(),
+                    maker: hex0x(&ev.maker),
+                    taker: hex0x(&ev.taker),
+                    maker_asset_id,
+                    taker_asset_id,
+                    maker_amount_filled: ev.maker_amount_filled.to_string(),
+                    taker_amount_filled: ev.taker_amount_filled.to_string(),
+                    fee: ev.fee.to_string(),
+                    exchange_version: 2,
+                    exchange_address: NEG_RISK_CTF_EXCHANGE_V2_STR.to_string(),
+                    tx,
+                });
+                continue;
+            }
+            if let Some(ev) = v2be::OrdersMatched::match_and_decode(log) {
+                let (maker_asset_id, taker_asset_id) =
+                    v2_asset_ids(Into::<u32>::into(ev.side.clone()), &ev.token_id.to_string());
+                out.orders_matched.push(OrdersMatched {
+                    taker_order_hash: ev.taker_order_hash.to_vec(),
+                    taker_order_maker: hex0x(&ev.taker_order_maker),
+                    maker_asset_id,
+                    taker_asset_id,
+                    maker_amount_filled: ev.maker_amount_filled.to_string(),
+                    taker_amount_filled: ev.taker_amount_filled.to_string(),
+                    exchange_version: 2,
+                    exchange_address: NEG_RISK_CTF_EXCHANGE_V2_STR.to_string(),
+                    tx,
+                });
+                continue;
+            }
+        }
+    }
+
+    Ok(out)
+}
+
+#[substreams::handlers::map]
+fn map_fills(
+    v1: V1Events,
+    v2: v2pb::ExchangeEvents,
+    v2b: UnifiedFills,
+) -> Result<UnifiedFills, Error> {
     let mut out = v1.fills.unwrap_or_default();
+    out.order_filled.extend(v2b.order_filled);
+    out.orders_matched.extend(v2b.orders_matched);
+    out.order_cancelled.extend(v2b.order_cancelled);
 
     for ev in v2.order_filled {
         let (maker_asset_id, taker_asset_id) = v2_asset_ids(ev.side, &ev.token_id);
@@ -250,9 +332,46 @@ fn map_fills(v1: V1Events, v2: v2pb::ExchangeEvents) -> Result<UnifiedFills, Err
     Ok(out)
 }
 
+// FeeCharged only — empirically confirmed (2 topics, 32 bytes non-indexed
+// data) against real logs from this address, matching CTF Exchange V2's
+// FeeCharged(address indexed receiver, uint256 amount) exactly. See the
+// admin/pause note on map_v2b_fills for why those events are not decoded
+// here.
 #[substreams::handlers::map]
-fn map_fee_events(v1: V1Events, v2: v2pb::FeeEvents) -> Result<UnifiedFeeEvents, Error> {
+fn map_v2b_fee_events(block: eth::Block) -> Result<UnifiedFeeEvents, Error> {
+    let mut out = UnifiedFeeEvents::default();
+
+    for trx in block.transactions() {
+        let tx_hash = trx.hash.clone();
+
+        for (log, _call) in trx.logs_with_calls() {
+            if log.address != NEG_RISK_CTF_EXCHANGE_V2 {
+                continue;
+            }
+            if let Some(ev) = v2be::FeeCharged::match_and_decode(log) {
+                out.fee_charged.push(FeeCharged {
+                    receiver: hex0x(&ev.receiver),
+                    token_id: String::new(),
+                    amount: ev.amount.to_string(),
+                    exchange_version: 2,
+                    exchange_address: NEG_RISK_CTF_EXCHANGE_V2_STR.to_string(),
+                    tx: tx_ctx(&block, log.index as u64, &tx_hash),
+                });
+            }
+        }
+    }
+
+    Ok(out)
+}
+
+#[substreams::handlers::map]
+fn map_fee_events(
+    v1: V1Events,
+    v2: v2pb::FeeEvents,
+    v2b: UnifiedFeeEvents,
+) -> Result<UnifiedFeeEvents, Error> {
     let mut out = v1.fee_events.unwrap_or_default();
+    out.fee_charged.extend(v2b.fee_charged);
 
     for ev in v2.fee_charged {
         out.fee_charged.push(FeeCharged {

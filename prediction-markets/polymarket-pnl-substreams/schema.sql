@@ -53,9 +53,13 @@ create table if not exists user_pnl (
 );
 
 -- Metadata + resolution status only. Not joined to trades/markets volume in
--- this version: linking a condition_id to its token_ids requires Gnosis
--- CTF's elliptic-curve collection-ID derivation, which this package does
--- not implement (see pnl.proto scope note). Join externally once available.
+-- this version: ConditionPreparation (where outcome_slot_count comes from)
+-- doesn't carry the collateral token address that src/ctf_position.rs needs
+-- to derive token_ids, and guessing it (v1 vs. v2-era "pUSD" collateral,
+-- per the substreams-dev landing-page draft) is exactly the kind of
+-- assumption this package avoids making without a way to verify it. Join
+-- externally, from a PositionSplit/PositionsMerge event's own
+-- collateral_token field, once needed.
 create table if not exists markets (
     condition_id       text primary key,
     oracle             text not null default '',
