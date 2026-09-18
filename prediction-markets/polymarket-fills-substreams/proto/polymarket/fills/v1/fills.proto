@@ -1,0 +1,179 @@
+syntax = "proto3";
+
+package polymarket.fills.v1;
+
+message TransactionContext {
+  string tx_hash = 1;
+  uint64 log_index = 2;
+  uint64 block_number = 3;
+  uint64 timestamp = 4;
+}
+
+// Unified across CLOB v1 (CTF Exchange, Neg Risk CTF Exchange) and v2
+// (CTF Exchange V2). V2's side/token_id encoding is normalized back into
+// maker_asset_id/taker_asset_id so v1 and v2 rows union cleanly:
+// side 0 (BUY) => maker holds collateral (asset id "0"), taker holds token_id.
+// side 1 (SELL) => maker holds token_id, taker holds collateral (asset id "0").
+message OrderFilled {
+  bytes order_hash = 1;
+  string maker = 2;
+  string taker = 3;
+  string maker_asset_id = 4;
+  string taker_asset_id = 5;
+  string maker_amount_filled = 6;
+  string taker_amount_filled = 7;
+  string fee = 8;
+  uint32 exchange_version = 9;
+  string exchange_address = 10;
+  TransactionContext tx = 11;
+}
+
+message OrdersMatched {
+  bytes taker_order_hash = 1;
+  string taker_order_maker = 2;
+  string maker_asset_id = 3;
+  string taker_asset_id = 4;
+  string maker_amount_filled = 5;
+  string taker_amount_filled = 6;
+  uint32 exchange_version = 7;
+  string exchange_address = 8;
+  TransactionContext tx = 9;
+}
+
+message OrderCancelled {
+  bytes order_hash = 1;
+  uint32 exchange_version = 2;
+  string exchange_address = 3;
+  TransactionContext tx = 4;
+}
+
+// Output of map_fills (unified v1 + v2), ordinal-sorted within the block
+// by (transaction index, log index).
+message UnifiedFills {
+  repeated OrderFilled order_filled = 1;
+  repeated OrdersMatched orders_matched = 2;
+  repeated OrderCancelled order_cancelled = 3;
+}
+
+message FeeCharged {
+  string receiver = 1;
+  string token_id = 2;
+  string amount = 3;
+  uint32 exchange_version = 4;
+  string exchange_address = 5;
+  TransactionContext tx = 6;
+}
+
+message FeeReceiverUpdated {
+  string fee_receiver = 1;
+  uint32 exchange_version = 2;
+  string exchange_address = 3;
+  TransactionContext tx = 4;
+}
+
+message MaxFeeRateUpdated {
+  string max_fee_rate = 1;
+  uint32 exchange_version = 2;
+  string exchange_address = 3;
+  TransactionContext tx = 4;
+}
+
+message UnifiedFeeEvents {
+  repeated FeeCharged fee_charged = 1;
+  repeated FeeReceiverUpdated fee_receiver_updated = 2;
+  repeated MaxFeeRateUpdated max_fee_rate_updated = 3;
+}
+
+message NewAdmin {
+  string new_admin_address = 1;
+  string admin = 2;
+  uint32 exchange_version = 3;
+  string exchange_address = 4;
+  TransactionContext tx = 5;
+}
+
+message NewOperator {
+  string new_operator_address = 1;
+  string admin = 2;
+  uint32 exchange_version = 3;
+  string exchange_address = 4;
+  TransactionContext tx = 5;
+}
+
+message RemovedAdmin {
+  string removed_admin = 1;
+  string admin = 2;
+  uint32 exchange_version = 3;
+  string exchange_address = 4;
+  TransactionContext tx = 5;
+}
+
+message RemovedOperator {
+  string removed_operator = 1;
+  string admin = 2;
+  uint32 exchange_version = 3;
+  string exchange_address = 4;
+  TransactionContext tx = 5;
+}
+
+message UnifiedAdminEvents {
+  repeated NewAdmin new_admin = 1;
+  repeated NewOperator new_operator = 2;
+  repeated RemovedAdmin removed_admin = 3;
+  repeated RemovedOperator removed_operator = 4;
+}
+
+// v1's global TradingPaused/TradingUnpaused normalized alongside v2's
+// per-user UserPaused/UserUnpaused. `user` is empty for the v1 global-pause
+// events (there is no equivalent per-user targeting on v1).
+message UserPaused {
+  string user = 1;
+  string effective_pause_block = 2;
+  uint32 exchange_version = 3;
+  string exchange_address = 4;
+  TransactionContext tx = 5;
+}
+
+message UserUnpaused {
+  string user = 1;
+  uint32 exchange_version = 2;
+  string exchange_address = 3;
+  TransactionContext tx = 4;
+}
+
+message UnifiedPauseEvents {
+  repeated UserPaused user_paused = 1;
+  repeated UserUnpaused user_unpaused = 2;
+}
+
+message OrderPreapproved {
+  bytes order_hash = 1;
+  uint32 exchange_version = 2;
+  string exchange_address = 3;
+  TransactionContext tx = 4;
+}
+
+message OrderPreapprovalInvalidated {
+  bytes order_hash = 1;
+  uint32 exchange_version = 2;
+  string exchange_address = 3;
+  TransactionContext tx = 4;
+}
+
+// v2-only (v1 has no order-preapproval concept); kept as its own module so
+// the container isn't padded with permanently-empty v1 fields.
+message UnifiedApprovalEvents {
+  repeated OrderPreapproved order_preapproved = 1;
+  repeated OrderPreapprovalInvalidated order_preapproval_invalidated = 2;
+}
+
+// Single-pass native decode of the two v1 contracts (CTF Exchange, Neg Risk
+// CTF Exchange). Consumed by map_fills/map_fee_events/map_admin_events/
+// map_pause_events, each of which merges the relevant slice with the v2
+// import into the final unified output.
+message V1Events {
+  UnifiedFills fills = 1;
+  UnifiedFeeEvents fee_events = 2;
+  UnifiedAdminEvents admin_events = 3;
+  UnifiedPauseEvents pause_events = 4;
+}

@@ -1469,6 +1469,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "polymarket_fills_substreams"
+version = "0.1.0"
+dependencies = [
+ "ethabi 18.0.0",
+ "hex-literal 0.4.1",
+ "prost 0.13.5",
+ "prost-types 0.13.5",
+ "substreams",
+ "substreams-ethereum",
+]
+
+[[package]]
+name = "polymarket_pnl_substreams"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hex-literal 0.4.1",
+ "prost 0.13.5",
+ "prost-types 0.13.5",
+ "substreams",
+ "substreams-database-change",
+]
+
+[[package]]
 name = "powh3d-substreams"
 version = "0.1.0"
 dependencies = [

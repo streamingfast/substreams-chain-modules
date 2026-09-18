@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package polymarket.pnl.v1;
+
+// Scope note: position/PnL/volume below are derived from OrderFilled fills
+// only (streamingfast/polymarket-fills, unified v1+v2). OrdersMatched is a
+// redundant per-tx summary of OrderFilled legs already counted, so it is
+// excluded to avoid double-counting.
+//
+// PnL uses a mark-to-market (cash-flow) model, not lot-level average cost:
+// total_pnl(user, token) = cumulative_cash_flow + qty * latest_price. This
+// is exact (no averaging assumption) and, unlike average cost, needs no
+// store to read its own prior state — average cost would require a module
+// that both feeds and reads the same store, which Substreams' store engine
+// cannot express (accumulation happens natively in "add" stores; your wasm
+// code never sees, and so can never depend on, the running total). It does
+// mean realized and unrealized PnL aren't reported separately: doing that
+// would need the same self-referential lot tracking. Once qty reaches 0,
+// total_pnl *is* the fully realized PnL, exactly.
+//
+// CTF PositionSplit/PositionsMerge/PayoutRedemption are not folded into
+// this in v0.1.0: deriving their token_id requires Gnosis CTF's
+// getCollectionId, which for Polymarket's real deployment uses an
+// elliptic-curve (BN254) collection-ID scheme, not plain keccak
+// concatenation — exactly the class of "looks plausible, quietly wrong"
+// arithmetic this package's sibling (polymarket-fills-substreams,
+// replacing a broken lowercase/checksum address filter) exists to avoid
+// repeating. CTF is used only for the markets registry (condition
+// metadata + resolution), which needs no such derivation.
+message TradeRow {
+  string id = 1; // "<tx_hash>-<log_index>-<leg>"
+  uint64 block_number = 2;
+  uint64 timestamp = 3;
+  string tx_hash = 4;
+  string user = 5;
+  string counterparty = 6;
+  string token_id = 7;
+  string side = 8; // "buy" | "sell"
+  string token_amount = 9;
+  string collateral_amount = 10;
+  string price = 11; // collateral_amount / token_amount, decimal string, "" if token_amount is 0
+  uint32 exchange_version = 12;
+  string exchange_address = 13;
+}
+
+message WhaleAlert {
+  string id = 1;
+  uint64 block_number = 2;
+  uint64 timestamp = 3;
+  string tx_hash = 4;
+  string user = 5;
+  string token_id = 6;
+  string collateral_amount = 7;
+}
+
+message LatestPrice {
+  string token_id = 1;
+  string price = 2;
+  uint64 block_number = 3;
+  uint64 timestamp = 4;
+}
+
+message KeyedDelta {
+  string key = 1;
+  string delta = 2; // bigint decimal string, may be negative
+}
+
+// One leg of a fill: `key` holds "<user>:<token_id>". qty_delta > 0 means
+// the user acquired qty_delta of token_id; < 0 means they disposed of
+// -qty_delta. cash_delta is signed from the user's own wallet perspective:
+// negative = collateral paid out, positive = collateral received.
+message PositionLeg {
+  string key = 1;
+  string qty_delta = 2;
+  string cash_delta = 3;
+}
+
+message TradeLegs {
+  repeated PositionLeg legs = 1;
+  // Also includes a "<user>:ALL" rollup entry per user touched this block,
+  // summing cash_delta across every token for that user.
+  repeated KeyedDelta cash_flow_deltas = 2;
+  repeated KeyedDelta volume_deltas = 3; // key = "<user>"
+  repeated KeyedDelta market_volume_deltas = 4; // key = "<token_id>"
+  repeated LatestPrice price_updates = 5;
+  repeated TradeRow trades = 6;
+  repeated WhaleAlert whale_alerts = 7;
+}
+
+// keyed "<condition_id_hex>"; metadata only, see scope note above.
+message MarketInfo {
+  string condition_id = 1;
+  string oracle = 2;
+  string question_id = 3;
+  uint32 outcome_slot_count = 4;
+  bool resolved = 5;
+  repeated string payout_numerators = 6;
+  uint64 created_block = 7;
+  uint64 resolved_block = 8;
+}
+
+message MarketDeltas {
+  repeated MarketInfo created = 1;
+  repeated MarketInfo resolved = 2;
+}

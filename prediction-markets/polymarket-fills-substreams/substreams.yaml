@@ -1,0 +1,117 @@
+specVersion: v0.1.0
+package:
+  name: polymarket-fills-substreams
+  version: v0.1.0
+  url: https://github.com/streamingfast/substreams-chain-modules/tree/main/prediction-markets/polymarket-fills-substreams
+  description: >
+    Unified Polymarket order-fill history on Polygon: CLOB v1 (CTF Exchange,
+    Neg Risk CTF Exchange, from their real deployment blocks) merged with
+    CLOB v2 (streamingfast/polymarket-exchange) into one ordinal-sorted
+    OrderFilled/OrdersMatched stream with an exchange_version column, so a
+    single query spans both eras. Every fill-extraction module is index-
+    filtered on the exchange contract addresses, so quiet blocks are never
+    billed.
+
+network: polygon
+
+imports:
+  eth_common: https://spkg.io/streamingfast/ethereum-common-v0.3.3.spkg
+  pmx_v2: https://spkg.io/colindickson/polymarket-exchange-v0.13.0.spkg
+
+protobuf:
+  files:
+    - polymarket/fills/v1/fills.proto
+  importPaths:
+    - ./proto
+  excludePaths:
+    - sf/substreams
+    - sf/ethereum
+    - google
+
+binaries:
+  default:
+    type: wasm/rust-v1
+    file: ../../target/wasm32-unknown-unknown/release/polymarket_fills_substreams.wasm
+
+modules:
+  - name: map_v1_events
+    kind: map
+    initialBlock: 33605403
+    doc: >
+      Single-pass native decode of the CLOB v1 contracts: CTF Exchange
+      (0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e, deployed block 33605403)
+      and Neg Risk CTF Exchange (0xc5d563a36ae78145c45a50134d48a1215220f80a,
+      deployed block 50505492). Both deploy blocks were verified against
+      Polygon RPC via eth_getCode binary search, not inherited from prior
+      (incorrect) documentation.
+    inputs:
+      - source: sf.ethereum.type.v2.Block
+    blockFilter:
+      module: eth_common:index_events
+      query:
+        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a"
+    output:
+      type: proto:polymarket.fills.v1.V1Events
+
+  - name: map_fills
+    kind: map
+    initialBlock: 33605403
+    doc: >
+      Unified OrderFilled/OrdersMatched/OrderCancelled across CLOB v1 and v2.
+      V2's side+token_id encoding is normalized into maker_asset_id/
+      taker_asset_id so v1 and v2 rows union without a schema mismatch.
+    inputs:
+      - map: map_v1_events
+      - map: pmx_v2:map_exchange_events
+    blockFilter:
+      module: eth_common:index_events
+      query:
+        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a || evt_addr:0xe111180000d2663c0091e4f400237545b87b996b"
+    output:
+      type: proto:polymarket.fills.v1.UnifiedFills
+
+  - name: map_fee_events
+    kind: map
+    initialBlock: 33605403
+    doc: Unified fee events across v1 (FeeCharged only) and v2 (FeeCharged, FeeReceiverUpdated, MaxFeeRateUpdated).
+    inputs:
+      - map: map_v1_events
+      - map: pmx_v2:map_fee_events
+    blockFilter:
+      module: eth_common:index_events
+      query:
+        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a || evt_addr:0xe111180000d2663c0091e4f400237545b87b996b"
+    output:
+      type: proto:polymarket.fills.v1.UnifiedFeeEvents
+
+  - name: map_admin_events
+    kind: map
+    initialBlock: 33605403
+    doc: Unified admin role events (NewAdmin, NewOperator, RemovedAdmin, RemovedOperator) across v1 and v2.
+    inputs:
+      - map: map_v1_events
+      - map: pmx_v2:map_admin_events
+    blockFilter:
+      module: eth_common:index_events
+      query:
+        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a || evt_addr:0xe111180000d2663c0091e4f400237545b87b996b"
+    output:
+      type: proto:polymarket.fills.v1.UnifiedAdminEvents
+
+  - name: map_pause_events
+    kind: map
+    initialBlock: 33605403
+    doc: >
+      Unified pause events. V1's global TradingPaused/TradingUnpaused are
+      normalized into UserPaused/UserUnpaused with an empty user field
+      (v1 has no per-user pause targeting); v2's UserPaused/UserUnpaused
+      pass through as-is.
+    inputs:
+      - map: map_v1_events
+      - map: pmx_v2:map_pause_events
+    blockFilter:
+      module: eth_common:index_events
+      query:
+        string: "evt_addr:0x4bfb41d5b3570defd03c39a9a4d8de6bd8b8982e || evt_addr:0xc5d563a36ae78145c45a50134d48a1215220f80a || evt_addr:0xe111180000d2663c0091e4f400237545b87b996b"
+    output:
+      type: proto:polymarket.fills.v1.UnifiedPauseEvents

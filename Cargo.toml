@@ -71,6 +71,8 @@ members = [
     "payment/superfluid-substreams",
     "tokenized-assets/robinhood-stock-tokens-substreams",
     "program-metadata/solana-idl-history-substreams",
+    "prediction-markets/polymarket-fills-substreams",
+    "prediction-markets/polymarket-pnl-substreams",
 ]
 resolver = "2"
 
