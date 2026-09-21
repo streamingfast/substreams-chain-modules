@@ -4,19 +4,17 @@ mod pb;
 use std::str::FromStr;
 use substreams::errors::Error;
 use substreams::scalar::BigInt;
-use substreams::store::{
-    StoreAdd, StoreAddBigInt, StoreGet, StoreGetBigInt, StoreGetProto, StoreNew, StoreSet,
-    StoreSetProto,
-};
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
 
-use pb::polymarket::ctf::v1::CtfEvents;
+use pb::polymarket::ctf::v1::{CtfEvents, Erc1155Events};
 use pb::polymarket::fills::v1::UnifiedFills;
 use pb::polymarket::pnl::v1::{
     KeyedDelta, LatestPrice, MarketDeltas, MarketInfo, PositionLeg, TradeLegs, TradeRow,
     WhaleAlert,
 };
+
+const ZERO_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
 
 // 10,000 USDC, raw 6-decimal atomic units.
 fn whale_threshold() -> BigInt {
@@ -213,64 +211,6 @@ fn map_trade_legs(fills: UnifiedFills) -> Result<TradeLegs, Error> {
     })
 }
 
-// Fed by fills (map_trade_legs) and CTF splits/merges (map_ctf_legs) only —
-// deliberately NOT by map_redemption_legs, so map_redemption_legs can read
-// this store (see its doc comment) without creating a module-graph cycle.
-// The redemption-closing amount lives in store_user_redemption_adj instead;
-// db_out sums both for the displayed position.
-#[substreams::handlers::store]
-fn store_user_positions(trade_legs: TradeLegs, ctf_legs: TradeLegs, store: StoreAddBigInt) {
-    for leg in trade_legs.legs.into_iter().chain(ctf_legs.legs) {
-        store.add(0, &leg.key, bi(&leg.qty_delta));
-    }
-}
-
-#[substreams::handlers::store]
-fn store_user_redemption_adj(redemption_legs: TradeLegs, store: StoreAddBigInt) {
-    for leg in redemption_legs.legs {
-        store.add(0, &leg.key, bi(&leg.qty_delta));
-    }
-}
-
-#[substreams::handlers::store]
-fn store_user_cash_flow(
-    trade_legs: TradeLegs,
-    ctf_legs: TradeLegs,
-    redemption_legs: TradeLegs,
-    store: StoreAddBigInt,
-) {
-    for d in trade_legs
-        .cash_flow_deltas
-        .into_iter()
-        .chain(ctf_legs.cash_flow_deltas)
-        .chain(redemption_legs.cash_flow_deltas)
-    {
-        store.add(0, &d.key, bi(&d.delta));
-    }
-}
-
-#[substreams::handlers::store]
-fn store_user_volume(legs: TradeLegs, store: StoreAddBigInt) {
-    for d in legs.volume_deltas {
-        store.add(0, &d.key, bi(&d.delta));
-    }
-}
-
-#[substreams::handlers::store]
-fn store_market_volume(legs: TradeLegs, store: StoreAddBigInt) {
-    for d in legs.market_volume_deltas {
-        store.add(0, &d.key, bi(&d.delta));
-    }
-}
-
-#[substreams::handlers::store]
-fn store_latest_prices(legs: TradeLegs, store: StoreSetProto<LatestPrice>) {
-    for (i, p) in legs.price_updates.into_iter().enumerate() {
-        let key = p.token_id.clone();
-        store.set(i as u64, &key, &p);
-    }
-}
-
 fn hex0x_bytes(b: &[u8]) -> String {
     format!("0x{}", substreams::Hex::encode(b))
 }
@@ -457,24 +397,88 @@ fn map_ctf_legs(ctf: CtfEvents) -> Result<TradeLegs, Error> {
     })
 }
 
+// An ERC-1155 burn (TransferSingle / TransferBatch to the zero address) of a
+// CTF position token.
+struct Burn {
+    tx_hash: String,
+    log_index: u64,
+    from: String,
+    token_id: String,
+    amount: BigInt,
+    consumed: bool,
+}
+
+fn collect_burns(erc1155: &Erc1155Events) -> Vec<Burn> {
+    let mut burns = Vec::new();
+    for ev in &erc1155.transfer_single {
+        if !ev.to.eq_ignore_ascii_case(ZERO_ADDRESS) {
+            continue;
+        }
+        let tx = match &ev.tx {
+            Some(t) => t,
+            None => continue,
+        };
+        burns.push(Burn {
+            tx_hash: tx.tx_hash.clone(),
+            log_index: tx.log_index,
+            from: ev.from.clone(),
+            token_id: ev.id.clone(),
+            amount: bi(&ev.value),
+            consumed: false,
+        });
+    }
+    for ev in &erc1155.transfer_batch {
+        if !ev.to.eq_ignore_ascii_case(ZERO_ADDRESS) {
+            continue;
+        }
+        let tx = match &ev.tx {
+            Some(t) => t,
+            None => continue,
+        };
+        for (id, value) in ev.ids.iter().zip(ev.values.iter()) {
+            burns.push(Burn {
+                tx_hash: tx.tx_hash.clone(),
+                log_index: tx.log_index,
+                from: ev.from.clone(),
+                token_id: id.clone(),
+                amount: bi(value),
+                consumed: false,
+            });
+        }
+    }
+    burns
+}
+
 // PayoutRedemption gives an aggregate `payout` but not a per-token amount:
 // Gnosis's redeemPositions() burns the caller's *entire* balance of each
-// index-set token. So the amount to close is read from store_user_positions
-// (the running position fed by map_trade_legs + map_ctf_legs, i.e. NOT fed
-// by this module) — reading a store this module doesn't also feed keeps the
-// module graph acyclic. The closing amount reflects state through the end
-// of the previous block; a redemption in the same block as the position's
-// last contributing fill/split/merge is not expected to occur in practice
-// (redemption requires the market to already be resolved).
+// index-set token, and only emits the burn when that balance is non-zero. The
+// amount to close is therefore read from the ERC-1155 burn (TransferSingle to
+// the zero address) the same call emitted just before PayoutRedemption — a
+// stateless lookup, so no store is needed. Each burn is matched to the nearest
+// preceding unconsumed burn of the same (tx, redeemer, token_id), so a merge
+// of the same token earlier in the transaction is never mistaken for the
+// redemption, and two redemptions of the same token in one transaction don't
+// share a burn.
+//
+// Index sets the redeemer held nothing in produce no burn and are skipped; the
+// payout is spread evenly over the ones that did.
 #[substreams::handlers::map]
-fn map_redemption_legs(ctf: CtfEvents, positions: StoreGetBigInt) -> Result<TradeLegs, Error> {
+fn map_redemption_legs(ctf: CtfEvents, erc1155: Erc1155Events) -> Result<TradeLegs, Error> {
+    Ok(redemption_legs(&ctf, &erc1155))
+}
+
+fn redemption_legs(ctf: &CtfEvents, erc1155: &Erc1155Events) -> TradeLegs {
     let mut legs = Vec::new();
     let mut cash_flow: std::collections::HashMap<String, BigInt> = std::collections::HashMap::new();
     let mut trades = Vec::new();
     let mut whale_alerts = Vec::new();
     let zero_parent = [0u8; 32];
+    let mut burns = collect_burns(erc1155);
 
-    for ev in &ctf.payout_redemption {
+    let mut redemptions: Vec<_> = ctf.payout_redemption.iter().collect();
+    redemptions.sort_by_key(|ev| ev.tx.as_ref().map(|t| (t.tx_hash.clone(), t.log_index)));
+
+    for ev in redemptions {
         let tx = match &ev.tx {
             Some(t) => t,
             None => continue,
@@ -490,19 +494,33 @@ fn map_redemption_legs(ctf: CtfEvents, positions: StoreGetBigInt) -> Result<Trad
             Some(c) => c,
             None => continue,
         };
-        let payout = bi(&ev.payout);
-        let proceeds_shares = even_shares(&payout, ev.index_sets.len());
 
+        // (index into ev.index_sets, token_id, amount burned)
+        let mut closed: Vec<(usize, String, BigInt)> = Vec::new();
         for (i, index_set_str) in ev.index_sets.iter().enumerate() {
             let index_set = bi(index_set_str);
             let token_id = ctf_position::compute_position_id(&collateral, &condition_id, &index_set);
-            let key = format!("{}:{}", ev.redeemer, token_id);
-            let held = positions.get_last(&key).unwrap_or_else(|| BigInt::from(0));
-            let proceeds = proceeds_shares[i].clone();
-
-            if held.is_zero() {
-                continue;
+            let burn = burns
+                .iter_mut()
+                .filter(|b| {
+                    !b.consumed
+                        && b.tx_hash == tx.tx_hash
+                        && b.log_index < tx.log_index
+                        && b.token_id == token_id
+                        && b.from.eq_ignore_ascii_case(&ev.redeemer)
+                })
+                .max_by_key(|b| b.log_index);
+            if let Some(b) = burn {
+                b.consumed = true;
+                if !b.amount.is_zero() {
+                    closed.push((i, token_id, b.amount.clone()));
+                }
             }
+        }
+
+        let proceeds_shares = even_shares(&bi(&ev.payout), closed.len());
+        for ((i, token_id, held), proceeds) in closed.into_iter().zip(proceeds_shares) {
+            let key = format!("{}:{}", ev.redeemer, token_id);
 
             legs.push(PositionLeg {
                 key: key.clone(),
@@ -543,7 +561,7 @@ fn map_redemption_legs(ctf: CtfEvents, positions: StoreGetBigInt) -> Result<Trad
         }
     }
 
-    Ok(TradeLegs {
+    TradeLegs {
         legs,
         cash_flow_deltas: cash_flow
             .into_iter()
@@ -557,7 +575,7 @@ fn map_redemption_legs(ctf: CtfEvents, positions: StoreGetBigInt) -> Result<Trad
         price_updates: vec![],
         trades,
         whale_alerts,
-    })
+    }
 }
 
 #[substreams::handlers::map]
@@ -601,19 +619,28 @@ fn map_markets(ctf: CtfEvents) -> Result<MarketDeltas, Error> {
     Ok(MarketDeltas { created, resolved })
 }
 
+// No store inputs: every running total is accumulated by Postgres through
+// `add` delta ops (the sink applies them as `col = COALESCE(col, 0) + value`,
+// and reverts them on a reorg), rather than read back from a store here.
+// Consequently total_pnl, which is nonlinear in the running quantity, cannot
+// be emitted at all — it is derived by the `user_positions_pnl` view in
+// schema.sql from user_positions and token_prices.
 #[substreams::handlers::map]
 fn db_out(
     trade_legs: TradeLegs,
     ctf_legs: TradeLegs,
     redemption_legs: TradeLegs,
     markets: MarketDeltas,
-    positions: StoreGetBigInt,
-    redemption_adj: StoreGetBigInt,
-    cash_flow: StoreGetBigInt,
-    volume: StoreGetBigInt,
-    market_volume: StoreGetBigInt,
-    latest_prices: StoreGetProto<LatestPrice>,
 ) -> Result<DatabaseChanges, Error> {
+    Ok(database_changes(&trade_legs, &ctf_legs, &redemption_legs, &markets))
+}
+
+fn database_changes(
+    trade_legs: &TradeLegs,
+    ctf_legs: &TradeLegs,
+    redemption_legs: &TradeLegs,
+    markets: &MarketDeltas,
+) -> DatabaseChanges {
     let mut tables = Tables::new();
 
     let all_trades = trade_legs
@@ -660,50 +687,39 @@ fn db_out(
             .set("collateral_amount", &w.collateral_amount);
     }
 
-    // Touched (user, token_id) position rows.
-    let mut touched_position_keys: Vec<(String, String)> = Vec::new();
-    let mut touched_users: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-    let mut touched_tokens: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    // Per-(user, token_id) position and cash-flow deltas, and the same cash
+    // flow rolled up per user. Rows touched more than once in a block are
+    // summed by Tables before they reach the sink.
     for leg in all_legs {
-        if let Some((user, token_id)) = leg.key.split_once(':') {
-            touched_position_keys.push((user.to_string(), token_id.to_string()));
-            touched_users.insert(user.to_string());
-            touched_tokens.insert(token_id.to_string());
+        let (user, token_id) = match leg.key.split_once(':') {
+            Some(parts) => parts,
+            None => continue,
+        };
+        tables
+            .upsert_row("user_positions", [("user", user), ("token_id", token_id)])
+            .add("token_amount", leg.qty_delta.as_str())
+            .add("net_cash_flow", leg.cash_delta.as_str());
+        tables
+            .upsert_row("user_pnl", user)
+            .add("net_cash_flow", leg.cash_delta.as_str());
+    }
+
+    for d in &trade_legs.volume_deltas {
+        tables
+            .upsert_row("user_pnl", d.key.as_str())
+            .add("total_volume", d.delta.as_str());
+    }
+
+    // price_updates arrive in fill order, so the last write per token wins.
+    for p in &trade_legs.price_updates {
+        if p.price.is_empty() {
+            continue;
         }
-    }
-
-    for (user, token_id) in touched_position_keys {
-        let key = format!("{}:{}", user, token_id);
-        let qty = positions.get_last(&key).unwrap_or_else(|| BigInt::from(0))
-            + redemption_adj.get_last(&key).unwrap_or_else(|| BigInt::from(0));
-        let net_cash_flow = cash_flow.get_last(&key).unwrap_or_else(|| BigInt::from(0));
-        let price = latest_prices
-            .get_last(&token_id)
-            .map(|p| p.price)
-            .unwrap_or_default();
-        let total_pnl = mark_to_market(&net_cash_flow, &qty, &price);
-
         tables
-            .upsert_row("user_positions", [("user", user.as_str()), ("token_id", token_id.as_str())])
-            .set("token_amount", qty.to_string())
-            .set("net_cash_flow", net_cash_flow.to_string())
-            .set("latest_price", &price)
-            .set("total_pnl", total_pnl.to_string());
-    }
-
-    for user in &touched_users {
-        let vol = volume.get_last(user).unwrap_or_else(|| BigInt::from(0));
-        let cash = cash_flow
-            .get_last(&format!("{}:ALL", user))
-            .unwrap_or_else(|| BigInt::from(0));
-        tables
-            .upsert_row("user_pnl", user.as_str())
-            .set("total_volume", vol.to_string())
-            .set("net_cash_flow", cash.to_string());
-    }
-
-    for token_id in &touched_tokens {
-        let _ = market_volume.get_last(token_id); // available for future markets-volume join
+            .upsert_row("token_prices", p.token_id.as_str())
+            .set("price", &p.price)
+            .set("block_number", p.block_number)
+            .set("timestamp", p.timestamp);
     }
 
     for m in &markets.created {
@@ -722,18 +738,167 @@ fn db_out(
             .set("resolved_block", m.resolved_block);
     }
 
-    Ok(tables.to_database_changes())
+    tables.to_database_changes()
 }
 
-fn mark_to_market(cash_flow: &BigInt, qty: &BigInt, price: &str) -> BigInt {
-    if price.is_empty() || qty.is_zero() {
-        return cash_flow.clone();
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pb::polymarket::ctf::v1::{PayoutRedemption, TransactionContext, TransferBatch, TransferSingle};
+
+    const USER: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const COLLATERAL: &str = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
+
+    fn ctx(tx: &str, log_index: u64) -> Option<TransactionContext> {
+        Some(TransactionContext {
+            tx_hash: tx.to_string(),
+            log_index,
+            block_number: 1,
+            timestamp: 1,
+        })
     }
-    // price is a "N.NNNNNN" fixed-point decimal string (6 decimals); qty and
-    // cash_flow are raw 6-decimal atomic units, so qty * price_scaled / 1e6
-    // keeps everything in the same atomic-unit scale.
-    let cleaned = price.replace('.', "");
-    let price_scaled = bi(&cleaned);
-    let mark_value = qty.clone() * price_scaled / BigInt::from(1_000_000u64);
-    cash_flow.clone() + mark_value
+
+    fn token(index_set: u32) -> String {
+        ctf_position::compute_position_id(
+            &parse_hex_address(COLLATERAL).unwrap(),
+            &[7u8; 32],
+            &BigInt::from(index_set),
+        )
+    }
+
+    fn redemption(tx: &str, log_index: u64, payout: &str) -> PayoutRedemption {
+        PayoutRedemption {
+            redeemer: USER.to_string(),
+            collateral_token: COLLATERAL.to_string(),
+            parent_collection_id: vec![0u8; 32],
+            condition_id: vec![7u8; 32],
+            index_sets: vec!["1".to_string(), "2".to_string()],
+            payout: payout.to_string(),
+            tx: ctx(tx, log_index),
+        }
+    }
+
+    fn burn(tx: &str, log_index: u64, from: &str, id: String, value: &str) -> TransferSingle {
+        TransferSingle {
+            operator: from.to_string(),
+            from: from.to_string(),
+            to: ZERO_ADDRESS.to_string(),
+            id,
+            value: value.to_string(),
+            tx: ctx(tx, log_index),
+        }
+    }
+
+    #[test]
+    fn redemption_closes_burned_amount_and_pays_only_held_tokens() {
+        let ctf = CtfEvents {
+            payout_redemption: vec![redemption("0xa", 10, "1000")],
+            ..Default::default()
+        };
+        // Only index set 2 was held; index set 1 emits no burn.
+        let erc = Erc1155Events {
+            transfer_single: vec![burn("0xa", 9, USER, token(2), "1000")],
+            ..Default::default()
+        };
+
+        let out = redemption_legs(&ctf, &erc);
+
+        assert_eq!(out.legs.len(), 1);
+        assert_eq!(out.legs[0].key, format!("{}:{}", USER, token(2)));
+        assert_eq!(out.legs[0].qty_delta, "-1000");
+        // Whole payout goes to the one held token, not half of it.
+        assert_eq!(out.legs[0].cash_delta, "1000");
+        assert_eq!(out.trades[0].token_amount, "1000");
+    }
+
+    #[test]
+    fn redemption_ignores_other_burns() {
+        let other = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        let ctf = CtfEvents {
+            payout_redemption: vec![redemption("0xa", 10, "500")],
+            ..Default::default()
+        };
+        let erc = Erc1155Events {
+            transfer_single: vec![
+                // Not a burn: a plain transfer.
+                TransferSingle {
+                    to: other.to_string(),
+                    ..burn("0xa", 8, USER, token(1), "5")
+                },
+                burn("0xa", 9, other, token(1), "6"), // other holder
+                burn("0xb", 9, USER, token(1), "7"),  // other transaction
+                burn("0xa", 11, USER, token(1), "8"), // after the redemption event
+            ],
+            ..Default::default()
+        };
+
+        let out = redemption_legs(&ctf, &erc);
+        assert!(out.legs.is_empty());
+        assert!(out.trades.is_empty());
+    }
+
+    #[test]
+    fn redemption_takes_nearest_burn_and_never_reuses_one() {
+        // A merge burn (log 3) precedes the redemption's own burn (log 9) of the
+        // same token in one transaction; a second redemption has no burn left.
+        let ctf = CtfEvents {
+            payout_redemption: vec![redemption("0xa", 10, "100"), redemption("0xa", 20, "100")],
+            ..Default::default()
+        };
+        let erc = Erc1155Events {
+            transfer_single: vec![
+                burn("0xa", 3, USER, token(1), "50"),
+                burn("0xa", 9, USER, token(1), "70"),
+            ],
+            transfer_batch: vec![TransferBatch {
+                operator: USER.to_string(),
+                from: USER.to_string(),
+                to: ZERO_ADDRESS.to_string(),
+                ids: vec![token(1)],
+                values: vec!["30".to_string()],
+                tx: ctx("0xa", 15),
+            }],
+            ..Default::default()
+        };
+
+        let out = redemption_legs(&ctf, &erc);
+
+        let qty: Vec<&str> = out.legs.iter().map(|l| l.qty_delta.as_str()).collect();
+        // First redemption (log 10) takes the log-9 burn, second (log 20) the
+        // log-15 batch burn; the merge burn at log 3 is left alone.
+        assert_eq!(qty, vec!["-70", "-30"]);
+    }
+
+    #[test]
+    fn db_out_emits_deltas_not_totals() {
+        let leg = |key: &str, qty: &str, cash: &str| PositionLeg {
+            key: key.to_string(),
+            qty_delta: qty.to_string(),
+            cash_delta: cash.to_string(),
+        };
+        let trade_legs = TradeLegs {
+            legs: vec![leg("0xu:t1", "10", "-4"), leg("0xu:t1", "-3", "2")],
+            volume_deltas: vec![KeyedDelta { key: "0xu".into(), delta: "6".into() }],
+            ..Default::default()
+        };
+
+        let changes = database_changes(
+            &trade_legs,
+            &TradeLegs::default(),
+            &TradeLegs::default(),
+            &MarketDeltas::default(),
+        );
+
+        let position = changes
+            .table_changes
+            .iter()
+            .find(|c| c.table == "user_positions")
+            .expect("user_positions change");
+        let field = |name: &str| position.fields.iter().find(|f| f.name == name).unwrap();
+        // Two legs on one key in one block collapse into a single summed delta.
+        assert_eq!(changes.table_changes.iter().filter(|c| c.table == "user_positions").count(), 1);
+        assert_eq!(field("token_amount").value, "7");
+        assert_eq!(field("net_cash_flow").value, "-2");
+        assert_eq!(field("token_amount").update_op(), substreams_database_change::pb::sf::substreams::sink::database::v1::field::UpdateOp::Add);
+    }
 }
