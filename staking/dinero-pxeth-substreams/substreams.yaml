@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: dinero-pxeth-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Dinero pxETH (Pirex ETH) on Ethereum mainnet. Tracks deposits, validator deposits, redemptions, emergency withdrawals, and fee distributions.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/dinero-pxeth-substreams
 

@@ -1,10 +1,12 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::mantle_staked_eth::types::v1::{
@@ -18,44 +20,46 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for log in trx.receipt().logs() {
-            let id = format!("{}-{}", tx_hash, log.index());
+        let Some(receipt) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let log = log?;
+            let id = format!("{}-{}", tx_hash, log.index);
 
-            if log.address() == STAKING.as_slice() {
-                if let Some(ev) =
-                    abi::staking::events::Staked::match_and_decode(log)
-                {
+            if log.address == STAKING.as_slice() {
+                if let Some(ev) = abi::staking::events::Staked::match_and_decode(&log) {
                     events.staking_stakeds.push(StakingStaked {
                         id: id.clone(),
                         staker: fmt_addr(&ev.staker),
                         eth_amount: ev.eth_amount.to_string(),
                         m_eth_amount: ev.m_eth_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::staking::events::UnstakeRequested::match_and_decode(log)
-                {
+                if let Some(ev) = abi::staking::events::UnstakeRequested::match_and_decode(&log) {
                     events.staking_unstake_requesteds.push(StakingUnstakeRequested {
                         id: id.clone(),
                         evt_id: ev.id.to_string(),
@@ -63,44 +67,43 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         eth_amount: ev.eth_amount.to_string(),
                         m_eth_locked: ev.m_eth_locked.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::staking::events::UnstakeRequestClaimed::match_and_decode(log)
-                {
-                    events.staking_unstake_request_claimeds.push(StakingUnstakeRequestClaimed {
-                        id: id.clone(),
-                        evt_id: ev.id.to_string(),
-                        staker: fmt_addr(&ev.staker),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
-                    continue;
-                }
-            }
-
-            if log.address() == RETURNS_AGGREGATOR.as_slice() {
-                if let Some(ev) =
-                    abi::returns_aggregator::events::FeesCollected::match_and_decode(log)
-                {
-                    events.returns_aggregator_fees_collecteds.push(ReturnsAggregatorFeesCollected {
-                        id: id.clone(),
-                        amount: ev.amount.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::staking::events::UnstakeRequestClaimed::match_and_decode(&log) {
+                    events
+                        .staking_unstake_request_claimeds
+                        .push(StakingUnstakeRequestClaimed {
+                            id: id.clone(),
+                            evt_id: ev.id.to_string(),
+                            staker: fmt_addr(&ev.staker),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
 
+            if log.address == RETURNS_AGGREGATOR.as_slice() {
+                if let Some(ev) = abi::returns_aggregator::events::FeesCollected::match_and_decode(&log) {
+                    events
+                        .returns_aggregator_fees_collecteds
+                        .push(ReturnsAggregatorFeesCollected {
+                            id: id.clone(),
+                            amount: ev.amount.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
+                    continue;
+                }
+            }
         }
     }
 

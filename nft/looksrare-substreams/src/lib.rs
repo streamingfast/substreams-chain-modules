@@ -1,10 +1,12 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::looksrare::types::v1::{
@@ -12,15 +14,16 @@ use crate::pb::looksrare::types::v1::{
 };
 
 // LooksRare Exchange v1 on Ethereum mainnet
-const LOOKSRARE_EXCHANGE: [u8; 20] =
-    hex_literal::hex!("59728544b08ab483533076417fbbb2fd0b17ce3a");
+const LOOKSRARE_EXCHANGE: [u8; 20] = hex_literal::hex!("59728544b08ab483533076417fbbb2fd0b17ce3a");
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 fn fmt_addr(addr: &[u8]) -> String {
@@ -32,23 +35,22 @@ fn fmt_bytes32(b: &[u8]) -> String {
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
             if log.address != LOOKSRARE_EXCHANGE {
                 continue;
             }
 
             let id = format!("{}-{}", tx_hash, log.index);
 
-            if let Some(ev) =
-                abi::looksrare_exchange::events::TakerAsk::match_and_decode(log)
-            {
+            if let Some(ev) = abi::looksrare_exchange::events::TakerAsk::match_and_decode(&log) {
                 events.taker_asks.push(TakerAsk {
                     id,
                     order_hash: fmt_bytes32(&ev.order_hash),
@@ -69,9 +71,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::looksrare_exchange::events::TakerBid::match_and_decode(log)
-            {
+            if let Some(ev) = abi::looksrare_exchange::events::TakerBid::match_and_decode(&log) {
                 events.taker_bids.push(TakerBid {
                     id,
                     order_hash: fmt_bytes32(&ev.order_hash),
@@ -92,9 +92,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::looksrare_exchange::events::RoyaltyPayment::match_and_decode(log)
-            {
+            if let Some(ev) = abi::looksrare_exchange::events::RoyaltyPayment::match_and_decode(&log) {
                 events.royalty_payments.push(RoyaltyPayment {
                     id,
                     collection: fmt_addr(&ev.collection),
@@ -110,9 +108,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::looksrare_exchange::events::CancelAllOrders::match_and_decode(log)
-            {
+            if let Some(ev) = abi::looksrare_exchange::events::CancelAllOrders::match_and_decode(&log) {
                 events.cancel_all_orders.push(CancelAllOrders {
                     id,
                     user: fmt_addr(&ev.user),
@@ -125,9 +121,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) =
-                abi::looksrare_exchange::events::CancelMultipleOrders::match_and_decode(log)
-            {
+            if let Some(ev) = abi::looksrare_exchange::events::CancelMultipleOrders::match_and_decode(&log) {
                 events.cancel_multiple_orders.push(CancelMultipleOrders {
                     id,
                     user: fmt_addr(&ev.user),

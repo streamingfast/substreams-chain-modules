@@ -1,7 +1,7 @@
 specVersion: v0.1.0
 package:
   name: robinhood-stock-tokens-substreams
-  version: v0.3.0
+  version: v0.4.0
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/tokenized-assets/robinhood-stock-tokens-substreams
   description: >
     Onchain basis for Robinhood Chain stock tokens: Uniswap V4 stock-token swaps

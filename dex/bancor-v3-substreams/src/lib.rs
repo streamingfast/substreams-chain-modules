@@ -1,15 +1,21 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams::store::{StoreGet, StoreGetString, StoreNew, StoreSet, StoreSetString};
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::bancor_v3::types::v1::{
-    Events, BancorNetworkPoolCollectionAdded, BancorNetworkTokensTraded, BntPoolTokensDeposited, BntPoolTokensWithdrawn, BntPoolTotalLiquidityUpdated, NetworkSettingsNetworkFeePpmUpdated, NetworkSettingsWithdrawalFeePpmUpdated, PoolCollectionDefaultTradingFeePpmUpdated, PoolCollectionTokensDeposited, PoolCollectionTokensWithdrawn, PoolCollectionTotalLiquidityUpdated, PoolCollectionTradingFeePpmUpdated, PoolTokenFactoryPoolTokenCreated, StandardRewardsProgramCreated, StandardRewardsProgramEnabled, StandardRewardsProgramTerminated,
+    BancorNetworkPoolCollectionAdded, BancorNetworkTokensTraded, BntPoolTokensDeposited, BntPoolTokensWithdrawn,
+    BntPoolTotalLiquidityUpdated, Events, NetworkSettingsNetworkFeePpmUpdated, NetworkSettingsWithdrawalFeePpmUpdated,
+    PoolCollectionDefaultTradingFeePpmUpdated, PoolCollectionTokensDeposited, PoolCollectionTokensWithdrawn,
+    PoolCollectionTotalLiquidityUpdated, PoolCollectionTradingFeePpmUpdated, PoolTokenFactoryPoolTokenCreated,
+    StandardRewardsProgramCreated, StandardRewardsProgramEnabled, StandardRewardsProgramTerminated,
 };
 
 const FACTORY: [u8; 20] = hex_literal::hex!("eef417e1d5cc832e619ae18d2f140de2999dd4fb");
@@ -22,23 +28,27 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::store]
-pub fn store_pools(block: Block, store: StoreSetString) {
+pub fn store_pools(block: &BlockLazyView<'_>, store: StoreSetString) {
     for trx in block.transactions() {
-        for log in trx.receipt().logs() {
-            if log.address() == FACTORY.as_slice() {
-                if let Some(ev) =
-                    abi::bancor_network::events::PoolCollectionAdded::match_and_decode(log)
-                {
-                    store.set(log.ordinal(), fmt_addr(&ev.pool_collection), &"1".to_string());
+        let Some(receipt) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let Ok(log) = log else { continue };
+            if log.address == FACTORY.as_slice() {
+                if let Some(ev) = abi::bancor_network::events::PoolCollectionAdded::match_and_decode(&log) {
+                    store.set(log.ordinal, fmt_addr(&ev.pool_collection), &"1".to_string());
                 }
             }
         }
@@ -46,34 +56,36 @@ pub fn store_pools(block: Block, store: StoreSetString) {
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>, store: StoreGetString) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for log in trx.receipt().logs() {
-            let id = format!("{}-{}", tx_hash, log.index());
+        let Some(receipt) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let log = log?;
+            let id = format!("{}-{}", tx_hash, log.index);
 
-            if log.address() == FACTORY.as_slice() {
-                if let Some(ev) =
-                    abi::bancor_network::events::PoolCollectionAdded::match_and_decode(log)
-                {
-                    events.bancor_network_pool_collection_addeds.push(BancorNetworkPoolCollectionAdded {
-                        id: id.clone(),
-                        pool_type: ev.pool_type.to_string(),
-                        pool_collection: fmt_addr(&ev.pool_collection),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+            if log.address == FACTORY.as_slice() {
+                if let Some(ev) = abi::bancor_network::events::PoolCollectionAdded::match_and_decode(&log) {
+                    events
+                        .bancor_network_pool_collection_addeds
+                        .push(BancorNetworkPoolCollectionAdded {
+                            id: id.clone(),
+                            pool_type: ev.pool_type.to_string(),
+                            pool_collection: fmt_addr(&ev.pool_collection),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::bancor_network::events::TokensTraded::match_and_decode(log)
-                {
+                if let Some(ev) = abi::bancor_network::events::TokensTraded::match_and_decode(&log) {
                     events.bancor_network_tokens_tradeds.push(BancorNetworkTokensTraded {
                         id: id.clone(),
                         context_id: fmt_addr(&ev.context_id),
@@ -86,7 +98,7 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                         bnt_fee_amount: ev.bnt_fee_amount.to_string(),
                         trader: fmt_addr(&ev.trader),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -94,203 +106,201 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                 }
             }
 
-            if store.get_last(fmt_addr(log.address())).is_some() {
-                let pool = fmt_addr(log.address());
-                if let Some(ev) =
-                    abi::pool_collection::events::TokensDeposited::match_and_decode(log)
-                {
-                    events.pool_collection_tokens_depositeds.push(PoolCollectionTokensDeposited {
-                        id: id.clone(),
-                        pool: pool.clone(),
-                        context_id: fmt_addr(&ev.context_id),
-                        provider: fmt_addr(&ev.provider),
-                        token: fmt_addr(&ev.token),
-                        token_amount: ev.token_amount.to_string(),
-                        pool_token_amount: ev.pool_token_amount.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+            if store.get_last(fmt_addr(log.address)).is_some() {
+                let pool = fmt_addr(log.address);
+                if let Some(ev) = abi::pool_collection::events::TokensDeposited::match_and_decode(&log) {
+                    events
+                        .pool_collection_tokens_depositeds
+                        .push(PoolCollectionTokensDeposited {
+                            id: id.clone(),
+                            pool: pool.clone(),
+                            context_id: fmt_addr(&ev.context_id),
+                            provider: fmt_addr(&ev.provider),
+                            token: fmt_addr(&ev.token),
+                            token_amount: ev.token_amount.to_string(),
+                            pool_token_amount: ev.pool_token_amount.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::pool_collection::events::TokensWithdrawn::match_and_decode(log)
-                {
-                    events.pool_collection_tokens_withdrawns.push(PoolCollectionTokensWithdrawn {
-                        id: id.clone(),
-                        pool: pool.clone(),
-                        context_id: fmt_addr(&ev.context_id),
-                        provider: fmt_addr(&ev.provider),
-                        token: fmt_addr(&ev.token),
-                        token_amount: ev.token_amount.to_string(),
-                        pool_token_amount: ev.pool_token_amount.to_string(),
-                        external_protection_base_token_amount: ev.external_protection_base_token_amount.to_string(),
-                        bnt_amount: ev.bnt_amount.to_string(),
-                        withdrawal_fee_amount: ev.withdrawal_fee_amount.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::pool_collection::events::TokensWithdrawn::match_and_decode(&log) {
+                    events
+                        .pool_collection_tokens_withdrawns
+                        .push(PoolCollectionTokensWithdrawn {
+                            id: id.clone(),
+                            pool: pool.clone(),
+                            context_id: fmt_addr(&ev.context_id),
+                            provider: fmt_addr(&ev.provider),
+                            token: fmt_addr(&ev.token),
+                            token_amount: ev.token_amount.to_string(),
+                            pool_token_amount: ev.pool_token_amount.to_string(),
+                            external_protection_base_token_amount: ev.external_protection_base_token_amount.to_string(),
+                            bnt_amount: ev.bnt_amount.to_string(),
+                            withdrawal_fee_amount: ev.withdrawal_fee_amount.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::pool_collection::events::TotalLiquidityUpdated::match_and_decode(log)
-                {
-                    events.pool_collection_total_liquidity_updateds.push(PoolCollectionTotalLiquidityUpdated {
-                        id: id.clone(),
-                        pool: pool.clone(),
-                        context_id: fmt_addr(&ev.context_id),
-                        evt_pool: fmt_addr(&ev.pool),
-                        liquidity: ev.liquidity.to_string(),
-                        staked_balance: ev.staked_balance.to_string(),
-                        pool_token_supply: ev.pool_token_supply.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::pool_collection::events::TotalLiquidityUpdated::match_and_decode(&log) {
+                    events
+                        .pool_collection_total_liquidity_updateds
+                        .push(PoolCollectionTotalLiquidityUpdated {
+                            id: id.clone(),
+                            pool: pool.clone(),
+                            context_id: fmt_addr(&ev.context_id),
+                            evt_pool: fmt_addr(&ev.pool),
+                            liquidity: ev.liquidity.to_string(),
+                            staked_balance: ev.staked_balance.to_string(),
+                            pool_token_supply: ev.pool_token_supply.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::pool_collection::events::DefaultTradingFeePpmUpdated::match_and_decode(log)
-                {
-                    events.pool_collection_default_trading_fee_ppm_updateds.push(PoolCollectionDefaultTradingFeePpmUpdated {
-                        id: id.clone(),
-                        pool: pool.clone(),
-                        prev_fee_ppm: ev.prev_fee_ppm.to_string(),
-                        new_fee_ppm: ev.new_fee_ppm.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::pool_collection::events::DefaultTradingFeePpmUpdated::match_and_decode(&log) {
+                    events.pool_collection_default_trading_fee_ppm_updateds.push(
+                        PoolCollectionDefaultTradingFeePpmUpdated {
+                            id: id.clone(),
+                            pool: pool.clone(),
+                            prev_fee_ppm: ev.prev_fee_ppm.to_string(),
+                            new_fee_ppm: ev.new_fee_ppm.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        },
+                    );
                     continue;
                 }
-                if let Some(ev) =
-                    abi::pool_collection::events::TradingFeePpmUpdated::match_and_decode(log)
-                {
-                    events.pool_collection_trading_fee_ppm_updateds.push(PoolCollectionTradingFeePpmUpdated {
-                        id: id.clone(),
-                        pool: pool.clone(),
-                        evt_pool: fmt_addr(&ev.pool),
-                        prev_fee_ppm: ev.prev_fee_ppm.to_string(),
-                        new_fee_ppm: ev.new_fee_ppm.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
-                    continue;
-                }
-            }
-
-            if log.address() == POOL_TOKEN_FACTORY.as_slice() {
-                if let Some(ev) =
-                    abi::pool_token_factory::events::PoolTokenCreated::match_and_decode(log)
-                {
-                    events.pool_token_factory_pool_token_createds.push(PoolTokenFactoryPoolTokenCreated {
-                        id: id.clone(),
-                        pool_token: fmt_addr(&ev.pool_token),
-                        token: fmt_addr(&ev.token),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::pool_collection::events::TradingFeePpmUpdated::match_and_decode(&log) {
+                    events
+                        .pool_collection_trading_fee_ppm_updateds
+                        .push(PoolCollectionTradingFeePpmUpdated {
+                            id: id.clone(),
+                            pool: pool.clone(),
+                            evt_pool: fmt_addr(&ev.pool),
+                            prev_fee_ppm: ev.prev_fee_ppm.to_string(),
+                            new_fee_ppm: ev.new_fee_ppm.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
 
-            if log.address() == NETWORK_SETTINGS.as_slice() {
-                if let Some(ev) =
-                    abi::network_settings::events::NetworkFeePpmUpdated::match_and_decode(log)
-                {
-                    events.network_settings_network_fee_ppm_updateds.push(NetworkSettingsNetworkFeePpmUpdated {
-                        id: id.clone(),
-                        prev_fee_ppm: ev.prev_fee_ppm.to_string(),
-                        new_fee_ppm: ev.new_fee_ppm.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
-                    continue;
-                }
-                if let Some(ev) =
-                    abi::network_settings::events::WithdrawalFeePpmUpdated::match_and_decode(log)
-                {
-                    events.network_settings_withdrawal_fee_ppm_updateds.push(NetworkSettingsWithdrawalFeePpmUpdated {
-                        id: id.clone(),
-                        prev_fee_ppm: ev.prev_fee_ppm.to_string(),
-                        new_fee_ppm: ev.new_fee_ppm.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+            if log.address == POOL_TOKEN_FACTORY.as_slice() {
+                if let Some(ev) = abi::pool_token_factory::events::PoolTokenCreated::match_and_decode(&log) {
+                    events
+                        .pool_token_factory_pool_token_createds
+                        .push(PoolTokenFactoryPoolTokenCreated {
+                            id: id.clone(),
+                            pool_token: fmt_addr(&ev.pool_token),
+                            token: fmt_addr(&ev.token),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
 
-            if log.address() == STANDARD_REWARDS.as_slice() {
-                if let Some(ev) =
-                    abi::standard_rewards::events::ProgramCreated::match_and_decode(log)
-                {
-                    events.standard_rewards_program_createds.push(StandardRewardsProgramCreated {
-                        id: id.clone(),
-                        pool: fmt_addr(&ev.pool),
-                        program_id: ev.program_id.to_string(),
-                        rewards_token: fmt_addr(&ev.rewards_token),
-                        total_rewards: ev.total_rewards.to_string(),
-                        start_time: ev.start_time.to_string(),
-                        end_time: ev.end_time.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+            if log.address == NETWORK_SETTINGS.as_slice() {
+                if let Some(ev) = abi::network_settings::events::NetworkFeePpmUpdated::match_and_decode(&log) {
+                    events
+                        .network_settings_network_fee_ppm_updateds
+                        .push(NetworkSettingsNetworkFeePpmUpdated {
+                            id: id.clone(),
+                            prev_fee_ppm: ev.prev_fee_ppm.to_string(),
+                            new_fee_ppm: ev.new_fee_ppm.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::standard_rewards::events::ProgramTerminated::match_and_decode(log)
-                {
-                    events.standard_rewards_program_terminateds.push(StandardRewardsProgramTerminated {
-                        id: id.clone(),
-                        pool: fmt_addr(&ev.pool),
-                        program_id: ev.program_id.to_string(),
-                        end_time: ev.end_time.to_string(),
-                        remaining_rewards: ev.remaining_rewards.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
-                    continue;
-                }
-                if let Some(ev) =
-                    abi::standard_rewards::events::ProgramEnabled::match_and_decode(log)
-                {
-                    events.standard_rewards_program_enableds.push(StandardRewardsProgramEnabled {
-                        id: id.clone(),
-                        pool: fmt_addr(&ev.pool),
-                        program_id: ev.program_id.to_string(),
-                        status: ev.status.to_string(),
-                        remaining_rewards: ev.remaining_rewards.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::network_settings::events::WithdrawalFeePpmUpdated::match_and_decode(&log) {
+                    events
+                        .network_settings_withdrawal_fee_ppm_updateds
+                        .push(NetworkSettingsWithdrawalFeePpmUpdated {
+                            id: id.clone(),
+                            prev_fee_ppm: ev.prev_fee_ppm.to_string(),
+                            new_fee_ppm: ev.new_fee_ppm.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
 
-            if log.address() == BNT_POOL.as_slice() {
-                if let Some(ev) =
-                    abi::bnt_pool::events::TokensDeposited::match_and_decode(log)
-                {
+            if log.address == STANDARD_REWARDS.as_slice() {
+                if let Some(ev) = abi::standard_rewards::events::ProgramCreated::match_and_decode(&log) {
+                    events
+                        .standard_rewards_program_createds
+                        .push(StandardRewardsProgramCreated {
+                            id: id.clone(),
+                            pool: fmt_addr(&ev.pool),
+                            program_id: ev.program_id.to_string(),
+                            rewards_token: fmt_addr(&ev.rewards_token),
+                            total_rewards: ev.total_rewards.to_string(),
+                            start_time: ev.start_time.to_string(),
+                            end_time: ev.end_time.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
+                    continue;
+                }
+                if let Some(ev) = abi::standard_rewards::events::ProgramTerminated::match_and_decode(&log) {
+                    events
+                        .standard_rewards_program_terminateds
+                        .push(StandardRewardsProgramTerminated {
+                            id: id.clone(),
+                            pool: fmt_addr(&ev.pool),
+                            program_id: ev.program_id.to_string(),
+                            end_time: ev.end_time.to_string(),
+                            remaining_rewards: ev.remaining_rewards.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
+                    continue;
+                }
+                if let Some(ev) = abi::standard_rewards::events::ProgramEnabled::match_and_decode(&log) {
+                    events
+                        .standard_rewards_program_enableds
+                        .push(StandardRewardsProgramEnabled {
+                            id: id.clone(),
+                            pool: fmt_addr(&ev.pool),
+                            program_id: ev.program_id.to_string(),
+                            status: ev.status.to_string(),
+                            remaining_rewards: ev.remaining_rewards.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
+                    continue;
+                }
+            }
+
+            if log.address == BNT_POOL.as_slice() {
+                if let Some(ev) = abi::bnt_pool::events::TokensDeposited::match_and_decode(&log) {
                     events.bnt_pool_tokens_depositeds.push(BntPoolTokensDeposited {
                         id: id.clone(),
                         context_id: fmt_addr(&ev.context_id),
@@ -299,15 +309,13 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                         pool_token_amount: ev.pool_token_amount.to_string(),
                         vbnt_amount: ev.vbnt_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::bnt_pool::events::TokensWithdrawn::match_and_decode(log)
-                {
+                if let Some(ev) = abi::bnt_pool::events::TokensWithdrawn::match_and_decode(&log) {
                     events.bnt_pool_tokens_withdrawns.push(BntPoolTokensWithdrawn {
                         id: id.clone(),
                         context_id: fmt_addr(&ev.context_id),
@@ -317,30 +325,29 @@ pub fn map_events(block: Block, store: StoreGetString) -> Result<Events, Error> 
                         vbnt_amount: ev.vbnt_amount.to_string(),
                         withdrawal_fee_amount: ev.withdrawal_fee_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::bnt_pool::events::TotalLiquidityUpdated::match_and_decode(log)
-                {
-                    events.bnt_pool_total_liquidity_updateds.push(BntPoolTotalLiquidityUpdated {
-                        id: id.clone(),
-                        context_id: fmt_addr(&ev.context_id),
-                        liquidity: ev.liquidity.to_string(),
-                        staked_balance: ev.staked_balance.to_string(),
-                        pool_token_supply: ev.pool_token_supply.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::bnt_pool::events::TotalLiquidityUpdated::match_and_decode(&log) {
+                    events
+                        .bnt_pool_total_liquidity_updateds
+                        .push(BntPoolTotalLiquidityUpdated {
+                            id: id.clone(),
+                            context_id: fmt_addr(&ev.context_id),
+                            liquidity: ev.liquidity.to_string(),
+                            staked_balance: ev.staked_balance.to_string(),
+                            pool_token_supply: ev.pool_token_supply.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
-
         }
     }
 
@@ -404,7 +411,10 @@ pub fn db_out(events: Events) -> Result<DatabaseChanges, Error> {
             .set("token", &e.token)
             .set("token_amount", &e.token_amount)
             .set("pool_token_amount", &e.pool_token_amount)
-            .set("external_protection_base_token_amount", &e.external_protection_base_token_amount)
+            .set(
+                "external_protection_base_token_amount",
+                &e.external_protection_base_token_amount,
+            )
             .set("bnt_amount", &e.bnt_amount)
             .set("withdrawal_fee_amount", &e.withdrawal_fee_amount)
             .set("tx_hash", &e.tx_hash)

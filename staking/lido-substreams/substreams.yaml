@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: lido-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Lido stETH deposits, transfers, oracle reports, and withdrawal events on Ethereum mainnet. Outputs DatabaseChanges for SQL sink consumption.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/lido-substreams
 

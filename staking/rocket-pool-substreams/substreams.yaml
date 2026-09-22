@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: rocket-pool-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Rocket Pool's rETH token on Ethereum mainnet. Tracks ETH deposits, rETH minting, and rETH burning events to monitor all liquid staking inflows and outflows across the protocol.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/rocket-pool-substreams
 

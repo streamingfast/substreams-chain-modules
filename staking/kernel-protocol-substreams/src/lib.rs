@@ -1,14 +1,17 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::kernel::types::v1::{
-    Events, KrethDeposit, KrethMintFeeSet, KrethRedeemFeeSet, KrethRedeemed, KsethDeposit, KsethMintFeeSet, KsethRedeemFeeSet, KsethRedeemed, KusdDeposit, KusdMintFeeSet, KusdRedeemFeeSet, KusdRedeemed,
+    Events, KrethDeposit, KrethMintFeeSet, KrethRedeemFeeSet, KrethRedeemed, KsethDeposit, KsethMintFeeSet,
+    KsethRedeemFeeSet, KsethRedeemed, KusdDeposit, KusdMintFeeSet, KusdRedeemFeeSet, KusdRedeemed,
 };
 
 const KRETH: [u8; 20] = hex_literal::hex!("f02c96dbbb92dc0325ad52b3f9f2b951f972bf00");
@@ -19,29 +22,30 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
             let id = format!("{}-{}", tx_hash, log.index);
 
             if log.address == KRETH {
-                if let Some(ev) =
-                    abi::kreth::events::MintFeeSet::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kreth::events::MintFeeSet::match_and_decode(&log) {
                     events.kreth_mint_fee_sets.push(KrethMintFeeSet {
                         id: id.clone(),
                         old_fee: ev.old_fee.to_string(),
@@ -53,9 +57,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kreth::events::RedeemFeeSet::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kreth::events::RedeemFeeSet::match_and_decode(&log) {
                     events.kreth_redeem_fee_sets.push(KrethRedeemFeeSet {
                         id: id.clone(),
                         old_fee: ev.old_fee.to_string(),
@@ -67,9 +69,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kreth::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kreth::events::Deposit::match_and_decode(&log) {
                     events.kreth_deposits.push(KrethDeposit {
                         id: id.clone(),
                         staker: fmt_addr(&ev.staker),
@@ -81,9 +81,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kreth::events::Redeemed::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kreth::events::Redeemed::match_and_decode(&log) {
                     events.kreth_redeemeds.push(KrethRedeemed {
                         id: id.clone(),
                         staker: fmt_addr(&ev.staker),
@@ -98,9 +96,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == KSETH {
-                if let Some(ev) =
-                    abi::kseth::events::MintFeeSet::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kseth::events::MintFeeSet::match_and_decode(&log) {
                     events.kseth_mint_fee_sets.push(KsethMintFeeSet {
                         id: id.clone(),
                         old_fee: ev.old_fee.to_string(),
@@ -112,9 +108,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kseth::events::RedeemFeeSet::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kseth::events::RedeemFeeSet::match_and_decode(&log) {
                     events.kseth_redeem_fee_sets.push(KsethRedeemFeeSet {
                         id: id.clone(),
                         old_fee: ev.old_fee.to_string(),
@@ -126,9 +120,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kseth::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kseth::events::Deposit::match_and_decode(&log) {
                     events.kseth_deposits.push(KsethDeposit {
                         id: id.clone(),
                         staker: fmt_addr(&ev.staker),
@@ -140,9 +132,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kseth::events::Redeemed::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kseth::events::Redeemed::match_and_decode(&log) {
                     events.kseth_redeemeds.push(KsethRedeemed {
                         id: id.clone(),
                         staker: fmt_addr(&ev.staker),
@@ -157,9 +147,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == KUSD {
-                if let Some(ev) =
-                    abi::kusd::events::MintFeeSet::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kusd::events::MintFeeSet::match_and_decode(&log) {
                     events.kusd_mint_fee_sets.push(KusdMintFeeSet {
                         id: id.clone(),
                         old_fee: ev.old_fee.to_string(),
@@ -171,9 +159,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kusd::events::RedeemFeeSet::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kusd::events::RedeemFeeSet::match_and_decode(&log) {
                     events.kusd_redeem_fee_sets.push(KusdRedeemFeeSet {
                         id: id.clone(),
                         old_fee: ev.old_fee.to_string(),
@@ -185,9 +171,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kusd::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kusd::events::Deposit::match_and_decode(&log) {
                     events.kusd_deposits.push(KusdDeposit {
                         id: id.clone(),
                         staker: fmt_addr(&ev.staker),
@@ -199,9 +183,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::kusd::events::Redeemed::match_and_decode(log)
-                {
+                if let Some(ev) = abi::kusd::events::Redeemed::match_and_decode(&log) {
                     events.kusd_redeemeds.push(KusdRedeemed {
                         id: id.clone(),
                         staker: fmt_addr(&ev.staker),
@@ -214,7 +196,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: frax-ether-staking-substreams
-  version: v0.1.1
+  version: v0.2.0
   description: Indexes Frax Finance's sfrxETH (staked frxETH) vault on Ethereum mainnet. Tracks deposits, withdrawals, and reward cycle events to monitor ETH liquid staking activity and yield distribution.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/frax-ether-staking-substreams
 

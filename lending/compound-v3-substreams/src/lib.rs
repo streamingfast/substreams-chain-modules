@@ -1,15 +1,17 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::compound_v3::types::v1::{
-    AbsorbCollateral, AbsorbDebt, BuyCollateral, Events, PauseAction, Supply, SupplyCollateral,
-    Transfer, TransferCollateral, Withdraw, WithdrawCollateral, WithdrawReserves,
+    AbsorbCollateral, AbsorbDebt, BuyCollateral, Events, PauseAction, Supply, SupplyCollateral, Transfer,
+    TransferCollateral, Withdraw, WithdrawCollateral, WithdrawReserves,
 };
 
 // Ethereum mainnet Comet proxy contracts
@@ -19,12 +21,14 @@ const KNOWN_COMETS: &[[u8; 20]] = &[
     hex_literal::hex!("3Afdc9BCA9213A35503b077a6072F3D0d5AB0840"), // cUSDTv3
 ];
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 fn fmt_addr(addr: &[u8]) -> String {
@@ -32,22 +36,23 @@ fn fmt_addr(addr: &[u8]) -> String {
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
-            if !KNOWN_COMETS.contains(&log.address.as_slice().try_into().unwrap_or([0u8; 20])) {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
+            if !KNOWN_COMETS.contains(&(*log.address).try_into().unwrap_or([0u8; 20])) {
                 continue;
             }
 
             let comet = fmt_addr(&log.address);
             let id = format!("{}-{}", tx_hash, log.index);
 
-            if let Some(ev) = abi::comet::events::Supply::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::Supply::match_and_decode(&log) {
                 events.supplies.push(Supply {
                     id,
                     comet,
@@ -62,7 +67,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::SupplyCollateral::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::SupplyCollateral::match_and_decode(&log) {
                 events.supply_collaterals.push(SupplyCollateral {
                     id,
                     comet,
@@ -78,7 +83,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::Withdraw::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::Withdraw::match_and_decode(&log) {
                 events.withdraws.push(Withdraw {
                     id,
                     comet,
@@ -93,7 +98,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::WithdrawCollateral::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::WithdrawCollateral::match_and_decode(&log) {
                 events.withdraw_collaterals.push(WithdrawCollateral {
                     id,
                     comet,
@@ -109,7 +114,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::Transfer::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::Transfer::match_and_decode(&log) {
                 events.transfers.push(Transfer {
                     id,
                     comet,
@@ -124,7 +129,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::TransferCollateral::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::TransferCollateral::match_and_decode(&log) {
                 events.transfer_collaterals.push(TransferCollateral {
                     id,
                     comet,
@@ -140,7 +145,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::AbsorbCollateral::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::AbsorbCollateral::match_and_decode(&log) {
                 events.absorb_collaterals.push(AbsorbCollateral {
                     id,
                     comet,
@@ -157,7 +162,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::AbsorbDebt::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::AbsorbDebt::match_and_decode(&log) {
                 events.absorb_debts.push(AbsorbDebt {
                     id,
                     comet,
@@ -173,7 +178,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::BuyCollateral::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::BuyCollateral::match_and_decode(&log) {
                 events.buy_collaterals.push(BuyCollateral {
                     id,
                     comet,
@@ -189,7 +194,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::PauseAction::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::PauseAction::match_and_decode(&log) {
                 events.pause_actions.push(PauseAction {
                     id,
                     comet,
@@ -206,7 +211,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::comet::events::WithdrawReserves::match_and_decode(log) {
+            if let Some(ev) = abi::comet::events::WithdrawReserves::match_and_decode(&log) {
                 events.withdraw_reserves.push(WithdrawReserves {
                     id,
                     comet,

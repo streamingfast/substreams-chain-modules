@@ -1,10 +1,12 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::cryptopunks::types::v1::{Bid, Events, Trade};
@@ -12,28 +14,31 @@ use crate::pb::cryptopunks::types::v1::{Bid, Events, Trade};
 // CryptoPunks contract on Ethereum mainnet — deployed block 3914495
 const CRYPTOPUNKS: [u8; 20] = hex_literal::hex!("b47e3cd837dDF8e4c57F05d70Ab865de6e193BBB");
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
             if log.address != CRYPTOPUNKS {
                 continue;
             }
 
-            if let Some(ev) = abi::cryptopunks::events::PunkBought::match_and_decode(log) {
+            if let Some(ev) = abi::cryptopunks::events::PunkBought::match_and_decode(&log) {
                 let id = format!("{}-{}", tx_hash, log.index);
                 events.trades.push(Trade {
                     id,
@@ -49,7 +54,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::cryptopunks::events::PunkBidEntered::match_and_decode(log) {
+            if let Some(ev) = abi::cryptopunks::events::PunkBidEntered::match_and_decode(&log) {
                 let id = format!("{}-{}", tx_hash, log.index);
                 events.bids.push(Bid {
                     id,
@@ -65,7 +70,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 continue;
             }
 
-            if let Some(ev) = abi::cryptopunks::events::PunkBidWithdrawn::match_and_decode(log) {
+            if let Some(ev) = abi::cryptopunks::events::PunkBidWithdrawn::match_and_decode(&log) {
                 let id = format!("{}-{}", tx_hash, log.index);
                 events.bids.push(Bid {
                     id,
