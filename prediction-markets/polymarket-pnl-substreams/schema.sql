@@ -28,24 +28,47 @@ create table if not exists whale_alerts (
 );
 create index if not exists whale_alerts_user_idx on whale_alerts ("user");
 
--- One row per (user, token_id): open position and mark-to-market PnL.
--- total_pnl = net_cash_flow + token_amount * latest_price (exact; equals
--- fully realized PnL once token_amount reaches 0 — see pnl.proto for why
--- this package does not report realized/unrealized as separate numbers).
--- All amounts are raw USDC atomic units (6 decimals).
+-- One row per (user, token_id): open position and cumulative cash flow.
+-- Both columns are accumulated by the sink from `add` delta ops. Mark-to-
+-- market PnL is not stored (it is nonlinear in token_amount, so it cannot be
+-- accumulated) — use user_positions_pnl below. All amounts are raw USDC
+-- atomic units (6 decimals).
 create table if not exists user_positions (
     "user"          text not null,
     token_id        text not null,
     token_amount    numeric not null default 0,
     net_cash_flow   numeric not null default 0,
-    latest_price    text not null default '',
-    total_pnl       numeric not null default 0,
     primary key ("user", token_id)
 );
+create index if not exists user_positions_token_id_idx on user_positions (token_id);
 
--- One row per user: totals across every market traded. total_pnl sums
--- user_positions.total_pnl-equivalent (cash_flow + open positions marked at
--- latest price) across all of the user's tokens.
+-- Most recent fill price per outcome token, "N.NNNNNN" (collateral per token).
+create table if not exists token_prices (
+    token_id     text primary key,
+    price        text not null,
+    block_number bigint not null,
+    "timestamp"  bigint not null
+);
+
+-- total_pnl = net_cash_flow + token_amount * latest_price (exact; equals
+-- fully realized PnL once token_amount reaches 0 — see pnl.proto for why
+-- this package does not report realized/unrealized as separate numbers).
+-- Joining at query time re-marks every holder when a price moves, not just
+-- the ones who traded since. Tokens with no fill yet are marked at cash flow.
+create or replace view user_positions_pnl as
+select
+    p."user",
+    p.token_id,
+    p.token_amount,
+    p.net_cash_flow,
+    coalesce(tp.price, '') as latest_price,
+    p.net_cash_flow + trunc(p.token_amount * coalesce(tp.price::numeric, 0)) as total_pnl
+from user_positions p
+left join token_prices tp on tp.token_id = p.token_id;
+
+-- One row per user: lifetime traded notional and net cash flow across every
+-- market, both accumulated by the sink. Total mark-to-market PnL per user is
+-- sum(total_pnl) over user_positions_pnl.
 create table if not exists user_pnl (
     "user"        text primary key,
     total_volume  numeric not null default 0,

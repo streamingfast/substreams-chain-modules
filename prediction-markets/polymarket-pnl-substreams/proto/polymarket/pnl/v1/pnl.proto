@@ -10,13 +10,12 @@ package polymarket.pnl.v1;
 //
 // PnL uses a mark-to-market (cash-flow) model, not lot-level average cost:
 // total_pnl(user, token) = cumulative_cash_flow + qty * latest_price. This
-// is exact (no averaging assumption) and, unlike average cost, needs no
-// store to read its own prior state — average cost would require a module
-// that both feeds and reads the same store, which Substreams' store engine
-// cannot express (accumulation happens natively in "add" stores; your wasm
-// code never sees, and so can never depend on, the running total). It does
-// mean realized and unrealized PnL aren't reported separately: doing that
-// would need the same self-referential lot tracking. Once qty reaches 0,
+// is exact (no averaging assumption). No module here keeps state: the
+// mappers emit per-block deltas and latest prices, Postgres accumulates them
+// (add ops on user_positions / user_pnl, set on token_prices), and total_pnl
+// is computed at query time by the user_positions_pnl view. It does mean
+// realized and unrealized PnL aren't reported separately: that would need
+// lot-level tracking, i.e. state a mapper does not have. Once qty reaches 0,
 // total_pnl *is* the fully realized PnL, exactly.
 //
 // CTF token IDs are derived (src/ctf_position.rs) via Polymarket's own

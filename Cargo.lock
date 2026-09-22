@@ -1482,7 +1482,7 @@ dependencies = [
 
 [[package]]
 name = "polymarket_pnl_substreams"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "hex",
  "hex-literal 0.4.1",
