@@ -134,8 +134,8 @@ and a round-trip split-then-merge isn't a new whale-sized flow).
 ```bash
 substreams build
 export SUBSTREAMS_SINK_DSN="postgres://user:pass@localhost:5432/polymarket?sslmode=disable"
-substreams sink postgres setup polymarket-pnl-substreams-v0.1.0.spkg
-substreams sink postgres polymarket-pnl-substreams-v0.1.0.spkg
+substreams sink postgres setup polymarket-pnl-substreams-v0.2.0.spkg
+substreams sink postgres polymarket-pnl-substreams-v0.2.0.spkg
 ```
 
 Built with [Substreams Skills](https://github.com/streamingfast/substreams-skills)

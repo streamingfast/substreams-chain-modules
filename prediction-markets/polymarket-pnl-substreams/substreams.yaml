@@ -1,7 +1,7 @@
 specVersion: v0.1.0
 package:
   name: polymarket-pnl-substreams
-  version: v0.1.0
+  version: v0.2.0
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/prediction-markets/polymarket-pnl-substreams
   description: >
     Per-address Polymarket positions, mark-to-market PnL, volume and whale
