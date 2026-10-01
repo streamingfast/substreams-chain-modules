@@ -17,10 +17,6 @@ imports:
 protobuf:
   files:
     - hood/basis/v1/basis.proto
-    # Vendored from substreams-sink-sql; must be listed here so pack bundles
-    # it (imports are resolved but not embedded), or the (schema.table) options
-    # on basis.proto cannot be decoded by the sink or by `substreams info`.
-    - sf/substreams/sink/sql/schema/v1/schema.proto
   importPaths:
     - ./proto
   # Rust codegen only. basis.proto imports the sink schema, so buf still

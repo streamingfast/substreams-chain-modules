@@ -10,11 +10,11 @@ package:
 protobuf:
   files:
     - events.proto
-    - sf/substreams/sink/sql/schema/v1/schema.proto
   importPaths:
     - ./proto
   excludePaths:
     - google
+    - sf/substreams
 
 binaries:
   default:
