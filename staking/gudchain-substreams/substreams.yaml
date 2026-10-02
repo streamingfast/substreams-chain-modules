@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: gudchain-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes the GUD vault on Ethereum. Tracks vault deposits and withdrawals.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/gudchain-substreams
 

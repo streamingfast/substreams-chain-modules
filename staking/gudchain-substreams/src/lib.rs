@@ -1,15 +1,15 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
-use crate::pb::gudchain::types::v1::{
-    Events, VaultV1Deposit, VaultV1Withdraw,
-};
+use crate::pb::gudchain::types::v1::{Events, VaultV1Deposit, VaultV1Withdraw};
 
 const VAULT_V1: [u8; 20] = hex_literal::hex!("d759e176def0f14e5c2d300238d41b1cbb5585bf");
 
@@ -17,29 +17,33 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for log in trx.receipt().logs() {
-            let id = format!("{}-{}", tx_hash, log.index());
+        let Some(receipt) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let log = log?;
+            let id = format!("{}-{}", tx_hash, log.index);
 
-            if log.address() == VAULT_V1.as_slice() {
-                if let Some(ev) =
-                    abi::vault_v1::events::Deposit::match_and_decode(log)
-                {
+            if log.address == VAULT_V1.as_slice() {
+                if let Some(ev) = abi::vault_v1::events::Deposit::match_and_decode(&log) {
                     events.vault_v1_deposits.push(VaultV1Deposit {
                         id: id.clone(),
                         token: fmt_addr(&ev.token),
@@ -47,15 +51,13 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         deposit_amt: ev.deposit_amt.to_string(),
                         share_issued: ev.share_issued.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::vault_v1::events::Withdraw::match_and_decode(log)
-                {
+                if let Some(ev) = abi::vault_v1::events::Withdraw::match_and_decode(&log) {
                     events.vault_v1_withdraws.push(VaultV1Withdraw {
                         id: id.clone(),
                         token: fmt_addr(&ev.token),
@@ -63,14 +65,13 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         amount: ev.amount.to_string(),
                         share_burnt: ev.share_burnt.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
             }
-
         }
     }
 

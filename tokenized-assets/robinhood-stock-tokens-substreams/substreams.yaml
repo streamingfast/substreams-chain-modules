@@ -1,7 +1,7 @@
 specVersion: v0.1.0
 package:
   name: robinhood-stock-tokens-substreams
-  version: v0.3.0
+  version: v0.4.0
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/tokenized-assets/robinhood-stock-tokens-substreams
   description: >
     Onchain basis for Robinhood Chain stock tokens: Uniswap V4 stock-token swaps
@@ -17,10 +17,6 @@ imports:
 protobuf:
   files:
     - hood/basis/v1/basis.proto
-    # Vendored from substreams-sink-sql; must be listed here so pack bundles
-    # it (imports are resolved but not embedded), or the (schema.table) options
-    # on basis.proto cannot be decoded by the sink or by `substreams info`.
-    - sf/substreams/sink/sql/schema/v1/schema.proto
   importPaths:
     - ./proto
   # Rust codegen only. basis.proto imports the sink schema, so buf still

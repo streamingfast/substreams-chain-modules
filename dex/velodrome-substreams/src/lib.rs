@@ -1,11 +1,13 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams::store::{StoreGet, StoreGetString, StoreNew, StoreSetIfNotExists, StoreSetIfNotExistsString};
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::velodrome::types::v1::{Events, LiquidityEvent, Pool, Pools, Swap};
@@ -13,26 +15,29 @@ use crate::pb::velodrome::types::v1::{Events, LiquidityEvent, Pool, Pools, Swap}
 // Velodrome V2 PoolFactory on Optimism — deployed block 119142390
 const POOL_FACTORY: [u8; 20] = hex_literal::hex!("F1046053aa5682b4F9a81b5481394DA16BE5FF5a");
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_factory_events(block: Block) -> Result<Pools, Error> {
+pub fn map_factory_events(block: &BlockLazyView<'_>) -> Result<Pools, Error> {
     let mut pools = Pools::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
             if log.address != POOL_FACTORY {
                 continue;
             }
-            if let Some(ev) = abi::pool_factory::events::PoolCreated::match_and_decode(log) {
+            if let Some(ev) = abi::pool_factory::events::PoolCreated::match_and_decode(&log) {
                 pools.pools.push(Pool {
                     address: format!("0x{}", hex::encode(ev.pool)),
                     token0: format!("0x{}", hex::encode(ev.token0)),
@@ -57,20 +62,21 @@ pub fn store_pools(pools: Pools, store: StoreSetIfNotExistsString) {
 }
 
 #[substreams::handlers::map]
-pub fn map_pool_events(block: Block, store: StoreGetString) -> Result<Events, Error> {
+pub fn map_pool_events(block: &BlockLazyView<'_>, store: StoreGetString) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
             let pool_addr = format!("0x{}", hex::encode(&log.address));
 
             if store.get_last(&pool_addr).is_none() {
                 continue;
             }
 
-            if let Some(ev) = abi::pool::events::Swap::match_and_decode(log) {
+            if let Some(ev) = abi::pool::events::Swap::match_and_decode(&log) {
                 events.swaps.push(Swap {
                     pool: pool_addr.clone(),
                     sender: format!("0x{}", hex::encode(ev.sender)),
@@ -87,7 +93,7 @@ pub fn map_pool_events(block: Block, store: StoreGetString) -> Result<Events, Er
                 continue;
             }
 
-            if let Some(ev) = abi::pool::events::Mint::match_and_decode(log) {
+            if let Some(ev) = abi::pool::events::Mint::match_and_decode(&log) {
                 events.liquidity.push(LiquidityEvent {
                     event_type: "mint".to_string(),
                     pool: pool_addr.clone(),
@@ -102,7 +108,7 @@ pub fn map_pool_events(block: Block, store: StoreGetString) -> Result<Events, Er
                 continue;
             }
 
-            if let Some(ev) = abi::pool::events::Burn::match_and_decode(log) {
+            if let Some(ev) = abi::pool::events::Burn::match_and_decode(&log) {
                 events.liquidity.push(LiquidityEvent {
                     event_type: "burn".to_string(),
                     pool: pool_addr.clone(),

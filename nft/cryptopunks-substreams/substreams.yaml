@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: cryptopunks-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes CryptoPunks trades and bids on Ethereum mainnet. Outputs DatabaseChanges for SQL sink consumption.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/nft/cryptopunks-substreams
 

@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: morpho-blue-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Morpho Blue lending markets on Ethereum mainnet. Covers CreateMarket, Supply, Borrow, Repay, Withdraw, Liquidate, and FlashLoan events. Outputs DatabaseChanges for SQL sink consumption.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/lending/morpho-blue-substreams
 

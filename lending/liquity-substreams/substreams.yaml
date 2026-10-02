@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: liquity-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes the Liquity CDP lending protocol on Ethereum mainnet. Covers trove lifecycle (open, adjust, close, liquidate), stability pool deposits and ETH gains, redemptions, and pool balance updates. Outputs DatabaseChanges for SQL sink consumption.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/lending/liquity-substreams
 

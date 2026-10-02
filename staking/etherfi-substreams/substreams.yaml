@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: etherfi-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes ether.fi liquid restaking protocol on Ethereum mainnet. Covers early adopter deposits, LiquidityPool deposits and withdrawals, rebase events, validator lifecycle, and node withdrawal events. Outputs DatabaseChanges for SQL sink consumption.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/etherfi-substreams
 

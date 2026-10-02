@@ -1,7 +1,7 @@
 specVersion: v0.1.0
 package:
   name: solana-idl-history-substreams
-  version: v0.2.0
+  version: v0.3.0
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/program-metadata/solana-idl-history-substreams
   description: >
     Chain-wide index of Anchor IDL account writes on Solana, covering both the
@@ -16,9 +16,6 @@ protobuf:
     # The block source type the modules consume. Listed so `substreams protogen`
     # emits its bindings; the modules read Account fields directly.
     - sf/solana/type/v1/account.proto
-    # Declaring the import is not enough: the descriptor has to travel inside the
-    # package or any client decoding the output fails to resolve it.
-    - sf/substreams/sink/sql/schema/v1/schema.proto
   importPaths:
     - ./proto
   # Rust codegen only. idl.proto imports the sink schema, so buf still generates

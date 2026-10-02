@@ -1,29 +1,30 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::eigenlayer::types::v1::{
-    BeaconChainEthDeposited, Deposit, Events, PodDeployed, ShareWithdrawalQueued,
-    WithdrawalCompleted, WithdrawalQueued,
+    BeaconChainETHDeposited, Deposit, Events, PodDeployed, ShareWithdrawalQueued, WithdrawalCompleted, WithdrawalQueued,
 };
 
-const STRATEGY_MANAGER: [u8; 20] =
-    hex_literal::hex!("858646372cc42e1a627fce94aa7a7033e7cf075a");
+const STRATEGY_MANAGER: [u8; 20] = hex_literal::hex!("858646372cc42e1a627fce94aa7a7033e7cf075a");
 
-const EIGEN_POD_MANAGER: [u8; 20] =
-    hex_literal::hex!("91e677b07f7af907ec9a428aafa9fc14a0d3a338");
+const EIGEN_POD_MANAGER: [u8; 20] = hex_literal::hex!("91e677b07f7af907ec9a428aafa9fc14a0d3a338");
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 fn fmt_addr(addr: &[u8]) -> String {
@@ -35,20 +36,19 @@ fn fmt_bytes32(b: &[u8]) -> String {
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
             let id = format!("{}-{}", tx_hash, log.index);
 
             if log.address == STRATEGY_MANAGER {
-                if let Some(ev) =
-                    abi::strategy_manager::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::strategy_manager::events::Deposit::match_and_decode(&log) {
                     events.deposits.push(Deposit {
                         id,
                         depositor: fmt_addr(&ev.depositor),
@@ -63,9 +63,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) =
-                    abi::strategy_manager::events::WithdrawalQueued::match_and_decode(log)
-                {
+                if let Some(ev) = abi::strategy_manager::events::WithdrawalQueued::match_and_decode(&log) {
                     events.withdrawals_queued.push(WithdrawalQueued {
                         id,
                         depositor: fmt_addr(&ev.depositor),
@@ -81,9 +79,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) =
-                    abi::strategy_manager::events::WithdrawalCompleted::match_and_decode(log)
-                {
+                if let Some(ev) = abi::strategy_manager::events::WithdrawalCompleted::match_and_decode(&log) {
                     events.withdrawals_completed.push(WithdrawalCompleted {
                         id,
                         depositor: fmt_addr(&ev.depositor),
@@ -98,9 +94,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) =
-                    abi::strategy_manager::events::ShareWithdrawalQueued::match_and_decode(log)
-                {
+                if let Some(ev) = abi::strategy_manager::events::ShareWithdrawalQueued::match_and_decode(&log) {
                     events.share_withdrawals_queued.push(ShareWithdrawalQueued {
                         id,
                         depositor: fmt_addr(&ev.depositor),
@@ -117,10 +111,8 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == EIGEN_POD_MANAGER {
-                if let Some(ev) =
-                    abi::eigen_pod_manager::events::BeaconChainEthDeposited::match_and_decode(log)
-                {
-                    events.beacon_chain_eth_deposits.push(BeaconChainEthDeposited {
+                if let Some(ev) = abi::eigen_pod_manager::events::BeaconChainEthDeposited::match_and_decode(&log) {
+                    events.beacon_chain_eth_deposits.push(BeaconChainETHDeposited {
                         id,
                         pod_owner: fmt_addr(&ev.pod_owner),
                         amount: ev.amount.to_string(),
@@ -132,9 +124,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
 
-                if let Some(ev) =
-                    abi::eigen_pod_manager::events::PodDeployed::match_and_decode(log)
-                {
+                if let Some(ev) = abi::eigen_pod_manager::events::PodDeployed::match_and_decode(&log) {
                     events.pods_deployed.push(PodDeployed {
                         id,
                         eigen_pod: fmt_addr(&ev.eigen_pod),

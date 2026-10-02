@@ -1,15 +1,15 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
-use crate::pb::flat_money::types::v1::{
-    Events, DelayedOrderOrderExecuted, UnitDeposit, UnitWithdraw,
-};
+use crate::pb::flat_money::types::v1::{DelayedOrderOrderExecuted, Events, UnitDeposit, UnitWithdraw};
 
 const UNIT: [u8; 20] = hex_literal::hex!("b95fb324b8a2faf8ec4f76e3df46c718402736e2");
 const LIQUIDATION_MODULE: [u8; 20] = hex_literal::hex!("981a29dc987136d23df5a0f67d86f428fb40e8aa");
@@ -19,51 +19,53 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for log in trx.receipt().logs() {
-            let id = format!("{}-{}", tx_hash, log.index());
+        let Some(receipt) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let log = log?;
+            let id = format!("{}-{}", tx_hash, log.index);
 
-            if log.address() == UNIT.as_slice() {
-                if let Some(ev) =
-                    abi::unit::events::Deposit::match_and_decode(log)
-                {
+            if log.address == UNIT.as_slice() {
+                if let Some(ev) = abi::unit::events::Deposit::match_and_decode(&log) {
                     events.unit_deposits.push(UnitDeposit {
                         id: id.clone(),
                         depositor: fmt_addr(&ev.depositor),
                         deposit_amount: ev.deposit_amount.to_string(),
                         minted_amount: ev.minted_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::unit::events::Withdraw::match_and_decode(log)
-                {
+                if let Some(ev) = abi::unit::events::Withdraw::match_and_decode(&log) {
                     events.unit_withdraws.push(UnitWithdraw {
                         id: id.clone(),
                         withdrawer: fmt_addr(&ev.withdrawer),
                         withdraw_amount: ev.withdraw_amount.to_string(),
                         burned_amount: ev.burned_amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
@@ -71,27 +73,23 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                 }
             }
 
-            if log.address() == LIQUIDATION_MODULE.as_slice() {
-            }
+            if log.address == LIQUIDATION_MODULE.as_slice() {}
 
-            if log.address() == DELAYED_ORDER.as_slice() {
-                if let Some(ev) =
-                    abi::delayed_order::events::OrderExecuted::match_and_decode(log)
-                {
+            if log.address == DELAYED_ORDER.as_slice() {
+                if let Some(ev) = abi::delayed_order::events::OrderExecuted::match_and_decode(&log) {
                     events.delayed_order_order_executeds.push(DelayedOrderOrderExecuted {
                         id: id.clone(),
                         account: fmt_addr(&ev.account),
                         order_type: ev.order_type.to_string(),
                         keeper_fee: ev.keeper_fee.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
             }
-
         }
     }
 

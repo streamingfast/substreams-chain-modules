@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: maple-finance-v2-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Maple Finance v2 factory contracts on Ethereum mainnet. Tracks PoolManager, MapleLoan, LoanManager, and Liquidator factory deployments (InstanceDeployed) plus migration helper events to catalog all protocol instances.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/lending/maple-finance-v2-substreams
 

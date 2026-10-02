@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: kernel-protocol-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Kernel Protocol staked assets (krETH, ksETH, kUSD) on Ethereum mainnet. Tracks deposits, redemptions, and mint/redeem fee changes.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/kernel-protocol-substreams
 

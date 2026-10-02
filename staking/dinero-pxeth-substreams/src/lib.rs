@@ -1,14 +1,17 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::dinero::types::v1::{
-    Events, PirexEthDeposit, PirexEthEmergencyWithdrawal, PirexEthInitiateRedemption, PirexEthRedeemWithPxEth, PirexEthValidatorDeposit, PirexFeesDistributeFees,
+    Events, PirexEthDeposit, PirexEthEmergencyWithdrawal, PirexEthInitiateRedemption, PirexEthRedeemWithPxEth,
+    PirexEthValidatorDeposit, PirexFeesDistributeFees,
 };
 
 const PIREX_ETH: [u8; 20] = hex_literal::hex!("d664b74274dfeb538d9bac494f3a4760828b02b0");
@@ -18,29 +21,30 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
             let id = format!("{}-{}", tx_hash, log.index);
 
             if log.address == PIREX_ETH {
-                if let Some(ev) =
-                    abi::pirex_eth::events::Deposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::pirex_eth::events::Deposit::match_and_decode(&log) {
                     events.pirex_eth_deposits.push(PirexEthDeposit {
                         id: id.clone(),
                         caller: fmt_addr(&ev.caller),
@@ -56,9 +60,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::pirex_eth::events::ValidatorDeposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::pirex_eth::events::ValidatorDeposit::match_and_decode(&log) {
                     events.pirex_eth_validator_deposits.push(PirexEthValidatorDeposit {
                         id: id.clone(),
                         pub_key: fmt_addr(&ev.pub_key),
@@ -69,24 +71,22 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::pirex_eth::events::EmergencyWithdrawal::match_and_decode(log)
-                {
-                    events.pirex_eth_emergency_withdrawals.push(PirexEthEmergencyWithdrawal {
-                        id: id.clone(),
-                        receiver: fmt_addr(&ev.receiver),
-                        token: fmt_addr(&ev.token),
-                        amount: ev.amount.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::pirex_eth::events::EmergencyWithdrawal::match_and_decode(&log) {
+                    events
+                        .pirex_eth_emergency_withdrawals
+                        .push(PirexEthEmergencyWithdrawal {
+                            id: id.clone(),
+                            receiver: fmt_addr(&ev.receiver),
+                            token: fmt_addr(&ev.token),
+                            amount: ev.amount.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::pirex_eth::events::InitiateRedemption::match_and_decode(log)
-                {
+                if let Some(ev) = abi::pirex_eth::events::InitiateRedemption::match_and_decode(&log) {
                     events.pirex_eth_initiate_redemptions.push(PirexEthInitiateRedemption {
                         id: id.clone(),
                         assets: ev.assets.to_string(),
@@ -99,9 +99,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::pirex_eth::events::RedeemWithPxEth::match_and_decode(log)
-                {
+                if let Some(ev) = abi::pirex_eth::events::RedeemWithPxEth::match_and_decode(&log) {
                     events.pirex_eth_redeem_with_px_eths.push(PirexEthRedeemWithPxEth {
                         id: id.clone(),
                         assets: ev.assets.to_string(),
@@ -117,9 +115,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
             }
 
             if log.address == PIREX_FEES {
-                if let Some(ev) =
-                    abi::pirex_fees::events::DistributeFees::match_and_decode(log)
-                {
+                if let Some(ev) = abi::pirex_fees::events::DistributeFees::match_and_decode(&log) {
                     events.pirex_fees_distribute_feess.push(PirexFeesDistributeFees {
                         id: id.clone(),
                         token: fmt_addr(&ev.token),
@@ -132,7 +128,6 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     continue;
                 }
             }
-
         }
     }
 

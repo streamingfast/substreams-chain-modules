@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: creth2-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes Cream ETH2 (CRETH2) staking on Ethereum mainnet. Tracks Cream and CRETH2 token transfers.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/creth2-substreams
 

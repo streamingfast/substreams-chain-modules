@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: looksrare-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes LooksRare NFT marketplace on Ethereum mainnet. Covers TakerAsk, TakerBid, RoyaltyPayment, and order cancellation events. Outputs DatabaseChanges for SQL sink consumption.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/nft/looksrare-substreams
 

@@ -1,15 +1,15 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
-use crate::pb::mev_protocol::types::v1::{
-    Events, MevethDeposit, MevethRewards, MevethWithdraw,
-};
+use crate::pb::mev_protocol::types::v1::{Events, MevethDeposit, MevethRewards, MevethWithdraw};
 
 const MEVETH: [u8; 20] = hex_literal::hex!("24ae2da0f361aa4be46b48eb19c91e02c5e4f27e");
 
@@ -17,29 +17,33 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for log in trx.receipt().logs() {
-            let id = format!("{}-{}", tx_hash, log.index());
+        let Some(receipt) = trx.receipt() else {
+            continue;
+        };
+        for log in receipt.logs.iter() {
+            let log = log?;
+            let id = format!("{}-{}", tx_hash, log.index);
 
-            if log.address() == MEVETH.as_slice() {
-                if let Some(ev) =
-                    abi::meveth::events::Deposit::match_and_decode(log)
-                {
+            if log.address == MEVETH.as_slice() {
+                if let Some(ev) = abi::meveth::events::Deposit::match_and_decode(&log) {
                     events.meveth_deposits.push(MevethDeposit {
                         id: id.clone(),
                         caller: fmt_addr(&ev.caller),
@@ -47,15 +51,13 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         assets: ev.assets.to_string(),
                         shares: ev.shares.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::meveth::events::Withdraw::match_and_decode(log)
-                {
+                if let Some(ev) = abi::meveth::events::Withdraw::match_and_decode(&log) {
                     events.meveth_withdraws.push(MevethWithdraw {
                         id: id.clone(),
                         caller: fmt_addr(&ev.caller),
@@ -64,28 +66,25 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                         assets: ev.assets.to_string(),
                         shares: ev.shares.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::meveth::events::Rewards::match_and_decode(log)
-                {
+                if let Some(ev) = abi::meveth::events::Rewards::match_and_decode(&log) {
                     events.meveth_rewardss.push(MevethRewards {
                         id: id.clone(),
                         sender: fmt_addr(&ev.sender),
                         amount: ev.amount.to_string(),
                         tx_hash: tx_hash.clone(),
-                        log_index: log.index() as u64,
+                        log_index: log.index as u64,
                         block_num: block.number,
                         timestamp,
                     });
                     continue;
                 }
             }
-
         }
     }
 

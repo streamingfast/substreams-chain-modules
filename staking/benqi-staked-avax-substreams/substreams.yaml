@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: benqi-staked-avax-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes BENQI Liquid Staked AVAX (sAVAX) on Avalanche. Tracks submissions, redemptions, and reward accrual.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/staking/benqi-staked-avax-substreams
 

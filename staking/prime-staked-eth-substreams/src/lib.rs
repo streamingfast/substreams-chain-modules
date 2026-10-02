@@ -1,14 +1,17 @@
 mod abi;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;
 use substreams_database_change::pb::sf::substreams::sink::database::v1::DatabaseChanges;
 use substreams_database_change::tables::Tables;
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 use substreams_ethereum::Event;
 
 use crate::pb::prime_staked_eth::types::v1::{
-    Events, LrtConfigAddedNewSupportedAsset, LrtDepositPoolAssetDeposit, LrtDepositPoolAssetSwapped, LrtDepositPoolWithdrawalClaimed,
+    Events, LrtConfigAddedNewSupportedAsset, LrtDepositPoolAssetDeposit, LrtDepositPoolAssetSwapped,
+    LrtDepositPoolWithdrawalClaimed,
 };
 
 const LRT_CONFIG: [u8; 20] = hex_literal::hex!("f879c7859b6de6fadafb74224ff05b16871646bf");
@@ -18,46 +21,47 @@ fn fmt_addr(addr: &[u8]) -> String {
     format!("0x{}", hex::encode(addr))
 }
 
-fn block_timestamp(block: &Block) -> u64 {
+fn block_timestamp(block: &BlockLazyView<'_>) -> u64 {
     block
         .header
-        .as_ref()
-        .and_then(|h| h.timestamp.as_ref().map(|t| t.seconds as u64))
-        .unwrap_or(0)
+        .get()
+        .ok()
+        .flatten()
+        .map(|h| h.timestamp.as_option().map(|t| t.seconds).unwrap_or(0))
+        .unwrap_or(0) as u64
 }
 
 #[substreams::handlers::map]
-pub fn map_events(block: Block) -> Result<Events, Error> {
+pub fn map_events(block: &BlockLazyView<'_>) -> Result<Events, Error> {
     let mut events = Events::default();
-    let timestamp = block_timestamp(&block);
+    let timestamp = block_timestamp(block);
 
     for trx in block.transactions() {
         let tx_hash = format!("0x{}", hex::encode(&trx.hash));
 
-        for (log, _call) in trx.logs_with_calls() {
+        for lc in trx.logs_with_calls() {
+            let log = &lc.log;
             let id = format!("{}-{}", tx_hash, log.index);
 
             if log.address == LRT_CONFIG {
-                if let Some(ev) =
-                    abi::lrt_config::events::AddedNewSupportedAsset::match_and_decode(log)
-                {
-                    events.lrt_config_added_new_supported_assets.push(LrtConfigAddedNewSupportedAsset {
-                        id: id.clone(),
-                        asset: fmt_addr(&ev.asset),
-                        deposit_limit: ev.deposit_limit.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::lrt_config::events::AddedNewSupportedAsset::match_and_decode(&log) {
+                    events
+                        .lrt_config_added_new_supported_assets
+                        .push(LrtConfigAddedNewSupportedAsset {
+                            id: id.clone(),
+                            asset: fmt_addr(&ev.asset),
+                            deposit_limit: ev.deposit_limit.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
 
             if log.address == LRT_DEPOSIT_POOL {
-                if let Some(ev) =
-                    abi::lrt_deposit_pool::events::AssetDeposit::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lrt_deposit_pool::events::AssetDeposit::match_and_decode(&log) {
                     events.lrt_deposit_pool_asset_deposits.push(LrtDepositPoolAssetDeposit {
                         id: id.clone(),
                         depositor: fmt_addr(&ev.depositor),
@@ -72,9 +76,7 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::lrt_deposit_pool::events::AssetSwapped::match_and_decode(log)
-                {
+                if let Some(ev) = abi::lrt_deposit_pool::events::AssetSwapped::match_and_decode(&log) {
                     events.lrt_deposit_pool_asset_swappeds.push(LrtDepositPoolAssetSwapped {
                         id: id.clone(),
                         from_asset: fmt_addr(&ev.from_asset),
@@ -88,23 +90,22 @@ pub fn map_events(block: Block) -> Result<Events, Error> {
                     });
                     continue;
                 }
-                if let Some(ev) =
-                    abi::lrt_deposit_pool::events::WithdrawalClaimed::match_and_decode(log)
-                {
-                    events.lrt_deposit_pool_withdrawal_claimeds.push(LrtDepositPoolWithdrawalClaimed {
-                        id: id.clone(),
-                        withdrawer: fmt_addr(&ev.withdrawer),
-                        asset: fmt_addr(&ev.asset),
-                        assets: ev.assets.to_string(),
-                        tx_hash: tx_hash.clone(),
-                        log_index: log.index as u64,
-                        block_num: block.number,
-                        timestamp,
-                    });
+                if let Some(ev) = abi::lrt_deposit_pool::events::WithdrawalClaimed::match_and_decode(&log) {
+                    events
+                        .lrt_deposit_pool_withdrawal_claimeds
+                        .push(LrtDepositPoolWithdrawalClaimed {
+                            id: id.clone(),
+                            withdrawer: fmt_addr(&ev.withdrawer),
+                            asset: fmt_addr(&ev.asset),
+                            assets: ev.assets.to_string(),
+                            tx_hash: tx_hash.clone(),
+                            log_index: log.index as u64,
+                            block_num: block.number,
+                            timestamp,
+                        });
                     continue;
                 }
             }
-
         }
     }
 

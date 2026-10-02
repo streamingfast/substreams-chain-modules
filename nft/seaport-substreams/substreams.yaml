@@ -2,7 +2,7 @@ specVersion: v0.1.0
 
 package:
   name: seaport-substreams
-  version: v0.1.0
+  version: v0.2.0
   description: Indexes OpenSea's Seaport protocol on Ethereum mainnet. Tracks all OrderFulfilled events including offer and consideration items, enabling full NFT trade history with buyer, seller, tokens, and amounts.
   url: https://github.com/streamingfast/substreams-chain-modules/tree/main/nft/seaport-substreams
 

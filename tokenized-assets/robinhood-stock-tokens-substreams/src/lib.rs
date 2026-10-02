@@ -1,5 +1,7 @@
 mod basis;
 mod chainlink;
+// buffa emits view re-exports for every message; most modules use only the owned type.
+#[allow(unused_imports)]
 mod pb;
 mod price;
 mod quality;
@@ -11,7 +13,7 @@ mod swaps;
 use substreams::errors::Error;
 use substreams::scalar::BigDecimal;
 use substreams::store::{StoreGet, StoreGetString, StoreNew, StoreSet, StoreSetString};
-use substreams_ethereum::pb::eth::v2::Block;
+use substreams_ethereum::pb::eth::v2::BlockLazyView;
 
 use pb::hood::basis::v1::{BasisTicks, ChainlinkAnswers, Rows, StockSwaps};
 use pb::uniswap::v4::v1::Events;
@@ -22,8 +24,8 @@ fn map_stock_swaps(events: Events) -> Result<StockSwaps, Error> {
 }
 
 #[substreams::handlers::map]
-fn map_chainlink_answers(block: Block) -> Result<ChainlinkAnswers, Error> {
-    Ok(chainlink::build(&block))
+fn map_chainlink_answers(block: &BlockLazyView<'_>) -> Result<ChainlinkAnswers, Error> {
+    Ok(chainlink::build(block))
 }
 
 #[substreams::handlers::store]
