@@ -66,7 +66,7 @@ fn map_trade_legs(fills: UnifiedFills) -> Result<TradeLegs, Error> {
     let mut whale_alerts = Vec::new();
 
     for ev in &fills.order_filled {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -264,7 +264,7 @@ fn map_ctf_legs(ctf: CtfEvents) -> Result<TradeLegs, Error> {
     let zero_parent = [0u8; 32];
 
     for ev in &ctf.position_split {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -328,7 +328,7 @@ fn map_ctf_legs(ctf: CtfEvents) -> Result<TradeLegs, Error> {
     }
 
     for ev in &ctf.positions_merge {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -414,7 +414,7 @@ fn collect_burns(erc1155: &Erc1155Events) -> Vec<Burn> {
         if !ev.to.eq_ignore_ascii_case(ZERO_ADDRESS) {
             continue;
         }
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -431,7 +431,7 @@ fn collect_burns(erc1155: &Erc1155Events) -> Vec<Burn> {
         if !ev.to.eq_ignore_ascii_case(ZERO_ADDRESS) {
             continue;
         }
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -476,10 +476,10 @@ fn redemption_legs(ctf: &CtfEvents, erc1155: &Erc1155Events) -> TradeLegs {
     let mut burns = collect_burns(erc1155);
 
     let mut redemptions: Vec<_> = ctf.payout_redemption.iter().collect();
-    redemptions.sort_by_key(|ev| ev.tx.as_ref().map(|t| (t.tx_hash.clone(), t.log_index)));
+    redemptions.sort_by_key(|ev| ev.tx.as_option().map(|t| (t.tx_hash.clone(), t.log_index)));
 
     for ev in redemptions {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -584,7 +584,7 @@ fn map_markets(ctf: CtfEvents) -> Result<MarketDeltas, Error> {
     let mut resolved = Vec::new();
 
     for ev in &ctf.condition_preparation {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -600,7 +600,7 @@ fn map_markets(ctf: CtfEvents) -> Result<MarketDeltas, Error> {
         });
     }
     for ev in &ctf.condition_resolution {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };

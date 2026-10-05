@@ -42,17 +42,16 @@ fn exchange_address(addr: &[u8]) -> String {
     hex0x(addr)
 }
 
-fn tx_ctx(block: &eth::Block, log_index: u64, tx_hash: &[u8]) -> Option<TransactionContext> {
-    Some(TransactionContext {
+fn tx_ctx(
+    block: &eth::Block,
+    log_index: u64,
+    tx_hash: &[u8],
+) -> buffa::MessageField<TransactionContext, buffa::Inline<TransactionContext>> {
+    buffa::MessageField::some(TransactionContext {
         tx_hash: hex0x(tx_hash),
         log_index,
         block_number: block.number,
-        timestamp: block
-            .header
-            .as_ref()
-            .and_then(|h| h.timestamp.as_ref())
-            .map(|t| t.seconds as u64)
-            .unwrap_or(0),
+        timestamp: block.header.timestamp.seconds as u64,
     })
 }
 
@@ -186,10 +185,10 @@ fn map_v1_events(block: eth::Block) -> Result<V1Events, Error> {
     }
 
     Ok(V1Events {
-        fills: Some(fills),
-        fee_events: Some(fee_events),
-        admin_events: Some(admin_events),
-        pause_events: Some(pause_events),
+        fills: buffa::MessageField::some(fills),
+        fee_events: buffa::MessageField::some(fee_events),
+        admin_events: buffa::MessageField::some(admin_events),
+        pause_events: buffa::MessageField::some(pause_events),
     })
 }
 
@@ -205,17 +204,24 @@ fn v2_asset_ids(side: u32, token_id: &str) -> (String, String) {
     }
 }
 
-fn v2_tx(tx: &Option<v2pb::TransactionContext>) -> Option<TransactionContext> {
-    tx.as_ref().map(|t| TransactionContext {
-        tx_hash: t.tx_hash.clone(),
-        log_index: t.log_index,
-        block_number: t.block_number,
-        timestamp: t.timestamp,
-    })
+fn v2_tx(
+    tx: &buffa::MessageField<v2pb::TransactionContext, buffa::Inline<v2pb::TransactionContext>>,
+) -> buffa::MessageField<TransactionContext, buffa::Inline<TransactionContext>> {
+    match tx.as_option() {
+        Some(t) => buffa::MessageField::some(TransactionContext {
+            tx_hash: t.tx_hash.clone(),
+            log_index: t.log_index,
+            block_number: t.block_number,
+            timestamp: t.timestamp,
+        }),
+        None => buffa::MessageField::none(),
+    }
 }
 
-fn log_index_of(tx: &Option<TransactionContext>) -> u64 {
-    tx.as_ref().map(|t| t.log_index).unwrap_or(0)
+fn log_index_of(
+    tx: &buffa::MessageField<TransactionContext, buffa::Inline<TransactionContext>>,
+) -> u64 {
+    tx.log_index
 }
 
 // OrderFilled/OrdersMatched only — the same two events already empirically
@@ -288,7 +294,7 @@ fn map_fills(
     v2: v2pb::ExchangeEvents,
     v2b: UnifiedFills,
 ) -> Result<UnifiedFills, Error> {
-    let mut out = v1.fills.unwrap_or_default();
+    let mut out = v1.fills.into_option().unwrap_or_default();
     out.order_filled.extend(v2b.order_filled);
     out.orders_matched.extend(v2b.orders_matched);
     out.order_cancelled.extend(v2b.order_cancelled);
@@ -370,7 +376,7 @@ fn map_fee_events(
     v2: v2pb::FeeEvents,
     v2b: UnifiedFeeEvents,
 ) -> Result<UnifiedFeeEvents, Error> {
-    let mut out = v1.fee_events.unwrap_or_default();
+    let mut out = v1.fee_events.into_option().unwrap_or_default();
     out.fee_charged.extend(v2b.fee_charged);
 
     for ev in v2.fee_charged {
@@ -407,7 +413,7 @@ fn map_fee_events(
 
 #[substreams::handlers::map]
 fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminEvents, Error> {
-    let mut out = v1.admin_events.unwrap_or_default();
+    let mut out = v1.admin_events.into_option().unwrap_or_default();
 
     for ev in v2.new_admin {
         out.new_admin.push(NewAdmin {
@@ -451,7 +457,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
 
 #[substreams::handlers::map]
 fn map_pause_events(v1: V1Events, v2: v2pb::PauseEvents) -> Result<UnifiedPauseEvents, Error> {
-    let mut out = v1.pause_events.unwrap_or_default();
+    let mut out = v1.pause_events.into_option().unwrap_or_default();
 
     for ev in v2.user_paused {
         out.user_paused.push(UserPaused {

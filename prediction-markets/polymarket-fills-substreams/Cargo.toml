@@ -9,12 +9,11 @@ repository.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
+buffa = { workspace = true }
+buffa-types = { workspace = true }
 substreams = { workspace = true }
 substreams-ethereum = { workspace = true }
-prost = { workspace = true }
-prost-types = { workspace = true }
 hex-literal = { workspace = true }
-ethabi = { workspace = true }
 
 [build-dependencies]
 substreams-ethereum = { workspace = true }
