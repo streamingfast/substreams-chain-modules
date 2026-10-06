@@ -26,6 +26,7 @@ protobuf:
   excludePaths:
     - sf/substreams
     - sf/ethereum
+    - sf/firehose
     - google
 
 binaries:

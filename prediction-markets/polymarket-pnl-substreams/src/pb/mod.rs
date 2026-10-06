@@ -22,27 +22,3 @@ pub mod polymarket {
         }
     }
 }
-pub mod sf {
-    pub mod ethereum {
-        pub mod substreams {
-            pub mod v1 {
-                include!("sf.ethereum.substreams.v1.mod.rs");
-            }
-        }
-        pub mod transform {
-            pub mod v1 {
-                include!("sf.ethereum.transform.v1.mod.rs");
-            }
-        }
-        pub mod r#type {
-            pub mod v2 {
-                include!("sf.ethereum.type.v2.mod.rs");
-            }
-        }
-    }
-    pub mod firehose {
-        pub mod v2 {
-            include!("sf.firehose.v2.mod.rs");
-        }
-    }
-}

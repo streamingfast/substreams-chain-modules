@@ -12,10 +12,3 @@ pub mod polymarket {
         }
     }
 }
-pub mod sf {
-    pub mod firehose {
-        pub mod v2 {
-            include!("sf.firehose.v2.mod.rs");
-        }
-    }
-}
