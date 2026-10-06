@@ -197,12 +197,14 @@ fn v2_asset_ids(is_buy: bool, token_id: &str) -> (String, String) {
     }
 }
 
-fn v2_tx(tx: &v2pb::TransactionContext) -> TransactionContext {
-    TransactionContext {
-        tx_hash: tx.tx_hash.clone(),
-        log_index: tx.log_index,
-        block_number: tx.block_number,
-        timestamp: tx.timestamp,
+impl From<v2pb::TransactionContext> for TransactionContext {
+    fn from(tx: v2pb::TransactionContext) -> Self {
+        Self {
+            tx_hash: tx.tx_hash,
+            log_index: tx.log_index,
+            block_number: tx.block_number,
+            timestamp: tx.timestamp,
+        }
     }
 }
 
@@ -294,7 +296,7 @@ fn map_fills(
             fee: ev.fee,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.orders_matched {
@@ -308,7 +310,7 @@ fn map_fills(
             taker_amount_filled: ev.taker_amount_filled,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
 
@@ -366,7 +368,7 @@ fn map_fee_events(
             amount: ev.amount,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.fee_receiver_updated {
@@ -375,7 +377,7 @@ fn map_fee_events(
                 fee_receiver: ev.fee_receiver,
                 exchange_version: 2,
                 exchange_address: CTF_EXCHANGE_V2.to_string(),
-                tx: ev.tx.as_option().map(v2_tx).into(),
+                tx: ev.tx.map(Into::into).into(),
             });
     }
     for ev in v2.max_fee_rate_updated {
@@ -384,7 +386,7 @@ fn map_fee_events(
                 max_fee_rate: ev.max_fee_rate,
                 exchange_version: 2,
                 exchange_address: CTF_EXCHANGE_V2.to_string(),
-                tx: ev.tx.as_option().map(v2_tx).into(),
+                tx: ev.tx.map(Into::into).into(),
             });
     }
 
@@ -401,7 +403,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
             admin: ev.admin,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.new_operator {
@@ -410,7 +412,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
             admin: ev.admin,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.removed_admin {
@@ -419,7 +421,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
             admin: ev.admin,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.removed_operator {
@@ -428,7 +430,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
             admin: ev.admin,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
 
@@ -445,7 +447,7 @@ fn map_pause_events(v1: V1Events, v2: v2pb::PauseEvents) -> Result<UnifiedPauseE
             effective_pause_block: ev.effective_pause_block,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.user_unpaused {
@@ -453,7 +455,7 @@ fn map_pause_events(v1: V1Events, v2: v2pb::PauseEvents) -> Result<UnifiedPauseE
             user: ev.user,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: ev.tx.as_option().map(v2_tx).into(),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
 
