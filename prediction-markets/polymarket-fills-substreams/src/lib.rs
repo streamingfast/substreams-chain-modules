@@ -1,5 +1,4 @@
 mod abi;
-#[allow(unused_imports)]
 mod pb;
 
 use substreams::errors::Error;

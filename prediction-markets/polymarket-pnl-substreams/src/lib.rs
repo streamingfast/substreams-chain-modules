@@ -1,5 +1,4 @@
 mod ctf_position;
-#[allow(unused_imports)]
 mod pb;
 
 use std::str::FromStr;
