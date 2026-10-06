@@ -66,7 +66,7 @@ fn map_trade_legs(fills: UnifiedFills) -> Result<TradeLegs, Error> {
     let mut whale_alerts = Vec::new();
 
     for ev in &fills.order_filled {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -264,7 +264,7 @@ fn map_ctf_legs(ctf: CtfEvents) -> Result<TradeLegs, Error> {
     let zero_parent = [0u8; 32];
 
     for ev in &ctf.position_split {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -328,7 +328,7 @@ fn map_ctf_legs(ctf: CtfEvents) -> Result<TradeLegs, Error> {
     }
 
     for ev in &ctf.positions_merge {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -414,7 +414,7 @@ fn collect_burns(erc1155: &Erc1155Events) -> Vec<Burn> {
         if !ev.to.eq_ignore_ascii_case(ZERO_ADDRESS) {
             continue;
         }
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -431,7 +431,7 @@ fn collect_burns(erc1155: &Erc1155Events) -> Vec<Burn> {
         if !ev.to.eq_ignore_ascii_case(ZERO_ADDRESS) {
             continue;
         }
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -476,10 +476,10 @@ fn redemption_legs(ctf: &CtfEvents, erc1155: &Erc1155Events) -> TradeLegs {
     let mut burns = collect_burns(erc1155);
 
     let mut redemptions: Vec<_> = ctf.payout_redemption.iter().collect();
-    redemptions.sort_by_key(|ev| ev.tx.as_ref().map(|t| (t.tx_hash.clone(), t.log_index)));
+    redemptions.sort_by_key(|ev| ev.tx.as_option().map(|t| (t.tx_hash.clone(), t.log_index)));
 
     for ev in redemptions {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -584,7 +584,7 @@ fn map_markets(ctf: CtfEvents) -> Result<MarketDeltas, Error> {
     let mut resolved = Vec::new();
 
     for ev in &ctf.condition_preparation {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -600,7 +600,7 @@ fn map_markets(ctf: CtfEvents) -> Result<MarketDeltas, Error> {
         });
     }
     for ev in &ctf.condition_resolution {
-        let tx = match &ev.tx {
+        let tx = match ev.tx.as_option() {
             Some(t) => t,
             None => continue,
         };
@@ -749,13 +749,13 @@ mod tests {
     const USER: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const COLLATERAL: &str = "0x2791bca1f2de4661ed88a30c99a7a9449aa84174";
 
-    fn ctx(tx: &str, log_index: u64) -> Option<TransactionContext> {
-        Some(TransactionContext {
+    fn ctx(tx: &str, log_index: u64) -> TransactionContext {
+        TransactionContext {
             tx_hash: tx.to_string(),
             log_index,
             block_number: 1,
             timestamp: 1,
-        })
+        }
     }
 
     fn token(index_set: u32) -> String {
@@ -774,7 +774,7 @@ mod tests {
             condition_id: vec![7u8; 32],
             index_sets: vec!["1".to_string(), "2".to_string()],
             payout: payout.to_string(),
-            tx: ctx(tx, log_index),
+            tx: ctx(tx, log_index).into(),
         }
     }
 
@@ -785,7 +785,7 @@ mod tests {
             to: ZERO_ADDRESS.to_string(),
             id,
             value: value.to_string(),
-            tx: ctx(tx, log_index),
+            tx: ctx(tx, log_index).into(),
         }
     }
 
@@ -856,7 +856,7 @@ mod tests {
                 to: ZERO_ADDRESS.to_string(),
                 ids: vec![token(1)],
                 values: vec!["30".to_string()],
-                tx: ctx("0xa", 15),
+                tx: ctx("0xa", 15).into(),
             }],
             ..Default::default()
         };
@@ -899,6 +899,6 @@ mod tests {
         assert_eq!(changes.table_changes.iter().filter(|c| c.table == "user_positions").count(), 1);
         assert_eq!(field("token_amount").value, "7");
         assert_eq!(field("net_cash_flow").value, "-2");
-        assert_eq!(field("token_amount").update_op(), substreams_database_change::pb::sf::substreams::sink::database::v1::field::UpdateOp::Add);
+        assert_eq!(field("token_amount").update_op, substreams_database_change::pb::sf::substreams::sink::database::v1::field::UpdateOp::Add);
     }
 }

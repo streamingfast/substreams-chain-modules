@@ -38,22 +38,13 @@ fn is_v1_exchange(addr: &[u8]) -> bool {
     addr == CTF_EXCHANGE_V1 || addr == NEG_RISK_CTF_EXCHANGE_V1
 }
 
-fn exchange_address(addr: &[u8]) -> String {
-    hex0x(addr)
-}
-
-fn tx_ctx(block: &eth::Block, log_index: u64, tx_hash: &[u8]) -> Option<TransactionContext> {
-    Some(TransactionContext {
+fn tx_ctx(block: &eth::Block, log_index: u64, tx_hash: &[u8]) -> TransactionContext {
+    TransactionContext {
         tx_hash: hex0x(tx_hash),
         log_index,
         block_number: block.number,
-        timestamp: block
-            .header
-            .as_ref()
-            .and_then(|h| h.timestamp.as_ref())
-            .map(|t| t.seconds as u64)
-            .unwrap_or(0),
-    })
+        timestamp: block.header.timestamp.seconds as u64,
+    }
 }
 
 #[substreams::handlers::map]
@@ -70,8 +61,8 @@ fn map_v1_events(block: eth::Block) -> Result<V1Events, Error> {
             if !is_v1_exchange(&log.address) {
                 continue;
             }
-            let addr = exchange_address(&log.address);
-            let tx = tx_ctx(&block, log.index as u64, &tx_hash);
+            let addr = hex0x(&log.address);
+            let tx = tx_ctx(&block, log.index as u64, &tx_hash).into();
 
             if let Some(ev) = v1e::OrderFilled::match_and_decode(log) {
                 fills.order_filled.push(OrderFilled {
@@ -186,10 +177,10 @@ fn map_v1_events(block: eth::Block) -> Result<V1Events, Error> {
     }
 
     Ok(V1Events {
-        fills: Some(fills),
-        fee_events: Some(fee_events),
-        admin_events: Some(admin_events),
-        pause_events: Some(pause_events),
+        fills: fills.into(),
+        fee_events: fee_events.into(),
+        admin_events: admin_events.into(),
+        pause_events: pause_events.into(),
     })
 }
 
@@ -197,25 +188,23 @@ fn map_v1_events(block: eth::Block) -> Result<V1Events, Error> {
 // outcome token (token_id). Side::SELL (1): reversed. Confirmed against
 // Polymarket/ctf-exchange-v2 src/exchange/libraries/Structs.sol and
 // CalculatorHelper.sol.
-fn v2_asset_ids(side: u32, token_id: &str) -> (String, String) {
-    if side == 0 {
+fn v2_asset_ids(is_buy: bool, token_id: &str) -> (String, String) {
+    if is_buy {
         ("0".to_string(), token_id.to_string())
     } else {
         (token_id.to_string(), "0".to_string())
     }
 }
 
-fn v2_tx(tx: &Option<v2pb::TransactionContext>) -> Option<TransactionContext> {
-    tx.as_ref().map(|t| TransactionContext {
-        tx_hash: t.tx_hash.clone(),
-        log_index: t.log_index,
-        block_number: t.block_number,
-        timestamp: t.timestamp,
-    })
-}
-
-fn log_index_of(tx: &Option<TransactionContext>) -> u64 {
-    tx.as_ref().map(|t| t.log_index).unwrap_or(0)
+impl From<v2pb::TransactionContext> for TransactionContext {
+    fn from(tx: v2pb::TransactionContext) -> Self {
+        Self {
+            tx_hash: tx.tx_hash,
+            log_index: tx.log_index,
+            block_number: tx.block_number,
+            timestamp: tx.timestamp,
+        }
+    }
 }
 
 // OrderFilled/OrdersMatched only — the same two events already empirically
@@ -240,11 +229,11 @@ fn map_v2b_fills(block: eth::Block) -> Result<UnifiedFills, Error> {
             if log.address != NEG_RISK_CTF_EXCHANGE_V2 {
                 continue;
             }
-            let tx = tx_ctx(&block, log.index as u64, &tx_hash);
+            let tx = tx_ctx(&block, log.index as u64, &tx_hash).into();
 
             if let Some(ev) = v2be::OrderFilled::match_and_decode(log) {
                 let (maker_asset_id, taker_asset_id) =
-                    v2_asset_ids(Into::<u32>::into(ev.side.clone()), &ev.token_id.to_string());
+                    v2_asset_ids(ev.side.is_zero(), &ev.token_id.to_string());
                 out.order_filled.push(OrderFilled {
                     order_hash: ev.order_hash.to_vec(),
                     maker: hex0x(&ev.maker),
@@ -262,7 +251,7 @@ fn map_v2b_fills(block: eth::Block) -> Result<UnifiedFills, Error> {
             }
             if let Some(ev) = v2be::OrdersMatched::match_and_decode(log) {
                 let (maker_asset_id, taker_asset_id) =
-                    v2_asset_ids(Into::<u32>::into(ev.side.clone()), &ev.token_id.to_string());
+                    v2_asset_ids(ev.side.is_zero(), &ev.token_id.to_string());
                 out.orders_matched.push(OrdersMatched {
                     taker_order_hash: ev.taker_order_hash.to_vec(),
                     taker_order_maker: hex0x(&ev.taker_order_maker),
@@ -288,13 +277,13 @@ fn map_fills(
     v2: v2pb::ExchangeEvents,
     v2b: UnifiedFills,
 ) -> Result<UnifiedFills, Error> {
-    let mut out = v1.fills.unwrap_or_default();
+    let mut out = v1.fills.unwrap();
     out.order_filled.extend(v2b.order_filled);
     out.orders_matched.extend(v2b.orders_matched);
     out.order_cancelled.extend(v2b.order_cancelled);
 
     for ev in v2.order_filled {
-        let (maker_asset_id, taker_asset_id) = v2_asset_ids(ev.side, &ev.token_id);
+        let (maker_asset_id, taker_asset_id) = v2_asset_ids(ev.side == 0, &ev.token_id);
         out.order_filled.push(OrderFilled {
             order_hash: ev.order_hash,
             maker: ev.maker,
@@ -306,11 +295,11 @@ fn map_fills(
             fee: ev.fee,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.orders_matched {
-        let (maker_asset_id, taker_asset_id) = v2_asset_ids(ev.side, &ev.token_id);
+        let (maker_asset_id, taker_asset_id) = v2_asset_ids(ev.side == 0, &ev.token_id);
         out.orders_matched.push(OrdersMatched {
             taker_order_hash: ev.taker_order_hash,
             taker_order_maker: ev.taker_order_maker,
@@ -320,14 +309,12 @@ fn map_fills(
             taker_amount_filled: ev.taker_amount_filled,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
 
-    out.order_filled
-        .sort_by_key(|e| log_index_of(&e.tx));
-    out.orders_matched
-        .sort_by_key(|e| log_index_of(&e.tx));
+    out.order_filled.sort_by_key(|e| e.tx.log_index);
+    out.orders_matched.sort_by_key(|e| e.tx.log_index);
 
     Ok(out)
 }
@@ -355,7 +342,7 @@ fn map_v2b_fee_events(block: eth::Block) -> Result<UnifiedFeeEvents, Error> {
                     amount: ev.amount.to_string(),
                     exchange_version: 2,
                     exchange_address: NEG_RISK_CTF_EXCHANGE_V2_STR.to_string(),
-                    tx: tx_ctx(&block, log.index as u64, &tx_hash),
+                    tx: tx_ctx(&block, log.index as u64, &tx_hash).into(),
                 });
             }
         }
@@ -370,7 +357,7 @@ fn map_fee_events(
     v2: v2pb::FeeEvents,
     v2b: UnifiedFeeEvents,
 ) -> Result<UnifiedFeeEvents, Error> {
-    let mut out = v1.fee_events.unwrap_or_default();
+    let mut out = v1.fee_events.unwrap();
     out.fee_charged.extend(v2b.fee_charged);
 
     for ev in v2.fee_charged {
@@ -380,7 +367,7 @@ fn map_fee_events(
             amount: ev.amount,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.fee_receiver_updated {
@@ -389,7 +376,7 @@ fn map_fee_events(
                 fee_receiver: ev.fee_receiver,
                 exchange_version: 2,
                 exchange_address: CTF_EXCHANGE_V2.to_string(),
-                tx: v2_tx(&ev.tx),
+                tx: ev.tx.map(Into::into).into(),
             });
     }
     for ev in v2.max_fee_rate_updated {
@@ -398,7 +385,7 @@ fn map_fee_events(
                 max_fee_rate: ev.max_fee_rate,
                 exchange_version: 2,
                 exchange_address: CTF_EXCHANGE_V2.to_string(),
-                tx: v2_tx(&ev.tx),
+                tx: ev.tx.map(Into::into).into(),
             });
     }
 
@@ -407,7 +394,7 @@ fn map_fee_events(
 
 #[substreams::handlers::map]
 fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminEvents, Error> {
-    let mut out = v1.admin_events.unwrap_or_default();
+    let mut out = v1.admin_events.unwrap();
 
     for ev in v2.new_admin {
         out.new_admin.push(NewAdmin {
@@ -415,7 +402,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
             admin: ev.admin,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.new_operator {
@@ -424,7 +411,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
             admin: ev.admin,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.removed_admin {
@@ -433,7 +420,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
             admin: ev.admin,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.removed_operator {
@@ -442,7 +429,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
             admin: ev.admin,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
 
@@ -451,7 +438,7 @@ fn map_admin_events(v1: V1Events, v2: v2pb::AdminEvents) -> Result<UnifiedAdminE
 
 #[substreams::handlers::map]
 fn map_pause_events(v1: V1Events, v2: v2pb::PauseEvents) -> Result<UnifiedPauseEvents, Error> {
-    let mut out = v1.pause_events.unwrap_or_default();
+    let mut out = v1.pause_events.unwrap();
 
     for ev in v2.user_paused {
         out.user_paused.push(UserPaused {
@@ -459,7 +446,7 @@ fn map_pause_events(v1: V1Events, v2: v2pb::PauseEvents) -> Result<UnifiedPauseE
             effective_pause_block: ev.effective_pause_block,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
     for ev in v2.user_unpaused {
@@ -467,7 +454,7 @@ fn map_pause_events(v1: V1Events, v2: v2pb::PauseEvents) -> Result<UnifiedPauseE
             user: ev.user,
             exchange_version: 2,
             exchange_address: CTF_EXCHANGE_V2.to_string(),
-            tx: v2_tx(&ev.tx),
+            tx: ev.tx.map(Into::into).into(),
         });
     }
 
